@@ -18,11 +18,11 @@ export function SubGrid({ data, isActive, onActivate }: SubGridProps) {
       onClick={onActivate}
       className={`
         aspect-square grid grid-cols-3 gap-[1px] p-[2px] cursor-pointer transition-all duration-300 rounded-sm overflow-hidden
+        bg-white border
         ${isActive
-          ? 'ring-2 ring-black ring-offset-1 shadow-xl'
-          : 'hover:shadow-lg'
+          ? 'border-[#E53935] ring-2 ring-[#E53935]/20 shadow-xl'
+          : 'border-black/8 hover:border-black/20 hover:shadow-lg'
         }
-        grid-bg-${data.opacityLevel}
       `}
     >
       {/* Position 0-3: top row and first cell of middle row */}
@@ -30,13 +30,12 @@ export function SubGrid({ data, isActive, onActivate }: SubGridProps) {
         <GridCell
           key={index}
           content={action}
-          opacityLevel={data.opacityLevel}
         />
       ))}
 
-      {/* Position 4: Center cell (title) */}
-      <div className="aspect-square flex items-center justify-center p-1.5 md:p-2 bg-black/[0.06] text-center group relative overflow-hidden">
-        <span className="text-[8px] md:text-xs font-medium leading-tight line-clamp-2 relative z-10">
+      {/* Position 4: Center cell (title) - white bg + red border (medium hierarchy) */}
+      <div className="aspect-square flex items-center justify-center p-1 md:p-1.5 text-center bg-white border-2 border-[#E53935]">
+        <span className="text-[7px] md:text-[10px] font-bold leading-tight line-clamp-2 text-black">
           {data.title}
         </span>
       </div>
@@ -46,7 +45,6 @@ export function SubGrid({ data, isActive, onActivate }: SubGridProps) {
         <GridCell
           key={index + 4}
           content={action}
-          opacityLevel={data.opacityLevel}
         />
       ))}
     </motion.div>

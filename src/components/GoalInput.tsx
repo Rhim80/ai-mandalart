@@ -2,15 +2,46 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { QuickContext } from '@/types/mandalart';
 
 interface GoalInputProps {
   onSubmit: (goal: string) => void;
   onDiscoveryMode: () => void;
   isLoading: boolean;
+  quickContext?: QuickContext | null;
 }
 
-export function GoalInput({ onSubmit, onDiscoveryMode, isLoading }: GoalInputProps) {
+export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }: GoalInputProps) {
   const [goal, setGoal] = useState('');
+
+  // Generate dynamic placeholder based on quick context
+  const getPlaceholder = () => {
+    if (!quickContext) return '2026년에 이루고 싶은 목표를 한 문장으로 적어주세요';
+
+    const area = quickContext.lifeAreas[0] || '';
+    const keyword = quickContext.yearKeyword || '';
+
+    const hints: Record<string, string> = {
+      '커리어': '커리어에서 이루고 싶은 목표를 적어주세요',
+      '건강': '건강 관련 목표를 적어주세요',
+      '관계': '관계에서 이루고 싶은 목표를 적어주세요',
+      '재정': '재정 목표를 적어주세요',
+      '자기계발': '자기계발 목표를 적어주세요',
+      '취미': '취미 관련 목표를 적어주세요',
+    };
+
+    return hints[area] || `${keyword}을 위한 2026년 목표를 적어주세요`;
+  };
+
+  // Generate subtitle based on context
+  const getSubtitle = () => {
+    if (!quickContext) return '당신의 목표를 81개의 구체적인 실천 계획으로';
+
+    const style = quickContext.goalStyle;
+    const keyword = quickContext.yearKeyword;
+
+    return `${keyword}을 향한 ${style} 목표를 만들어보세요`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +69,7 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading }: GoalInputPro
             AI Mandalart
           </h1>
           <p className="text-xl text-secondary font-light leading-relaxed">
-            당신의 목표를<br className="md:hidden" /> 81개의 구체적인 실천 계획으로
+            {getSubtitle().split(' ').slice(0, 3).join(' ')}<br className="md:hidden" /> {getSubtitle().split(' ').slice(3).join(' ')}
           </p>
         </motion.div>
       </div>
@@ -55,7 +86,7 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading }: GoalInputPro
             type="text"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            placeholder="2026년에 이루고 싶은 목표를 한 문장으로 적어주세요"
+            placeholder={getPlaceholder()}
             className="input-underline text-center"
             disabled={isLoading}
           />

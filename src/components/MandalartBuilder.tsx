@@ -2,8 +2,9 @@
 
 import { useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import html2canvas from 'html2canvas';
+import { domToPng } from 'modern-screenshot';
 import { useMandalartSession } from '@/hooks/useMandalartSession';
+import { QuickContext } from './QuickContext';
 import { GoalInput } from './GoalInput';
 import { DiscoveryMode } from './DiscoveryMode';
 import { ArchetypeResult } from './ArchetypeResult';
@@ -11,7 +12,7 @@ import { InterviewStep } from './InterviewStep';
 import { PillarSelection } from './PillarSelection';
 import { ActionSelection } from './ActionSelection';
 import { MandalartGrid } from './MandalartGrid';
-import { InterviewAnswer, ArchetypeResponse, PillarsResponse, Pillar, SubGrid } from '@/types/mandalart';
+import { InterviewAnswer, ArchetypeResponse, PillarsResponse, Pillar, SubGrid, QuickContext as QuickContextType } from '@/types/mandalart';
 
 export function MandalartBuilder() {
   const {
@@ -21,6 +22,7 @@ export function MandalartBuilder() {
     error,
     setError,
     setStep,
+    setQuickContext,
     setGoal,
     setArchetype,
     addInterviewAnswer,
@@ -32,6 +34,11 @@ export function MandalartBuilder() {
     resetSession,
   } = useMandalartSession();
 
+  // Handle quick context completion
+  const handleQuickContextComplete = useCallback((context: QuickContextType) => {
+    setQuickContext(context);
+  }, [setQuickContext]);
+
   // Handle goal submission
   const handleGoalSubmit = useCallback(async (goal: string) => {
     setIsLoading(true);
@@ -42,7 +49,7 @@ export function MandalartBuilder() {
       const res = await fetch('/api/archetype', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal }),
+        body: JSON.stringify({ goal, quickContext: session.quickContext }),
       });
 
       if (!res.ok) throw new Error('Failed to analyze goal');
@@ -55,7 +62,7 @@ export function MandalartBuilder() {
     } finally {
       setIsLoading(false);
     }
-  }, [setIsLoading, setError, setGoal, setArchetype, setStep]);
+  }, [setIsLoading, setError, setGoal, setArchetype, setStep, session.quickContext]);
 
   // Handle discovery mode completion
   const handleDiscoveryComplete = useCallback((goal: string) => {
@@ -140,14 +147,14 @@ export function MandalartBuilder() {
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
+      const dataUrl = await domToPng(element, {
         scale: 2,
+        backgroundColor: '#ffffff',
       });
 
       const link = document.createElement('a');
       link.download = `mandalart-${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error('Failed to export:', err);
@@ -197,12 +204,20 @@ export function MandalartBuilder() {
       )}
 
       <AnimatePresence mode="wait">
+        {session.currentStep === 'QUICK_CONTEXT' && (
+          <QuickContext
+            key="quick-context"
+            onComplete={handleQuickContextComplete}
+          />
+        )}
+
         {session.currentStep === 'GOAL_INPUT' && (
           <GoalInput
             key="goal-input"
             onSubmit={handleGoalSubmit}
             onDiscoveryMode={enterDiscoveryMode}
             isLoading={isLoading}
+            quickContext={session.quickContext}
           />
         )}
 
@@ -229,6 +244,7 @@ export function MandalartBuilder() {
             key="interview"
             archetype={session.projectInfo.archetype}
             goal={session.userContext.goal}
+            quickContext={session.quickContext}
             onComplete={handleInterviewComplete}
           />
         )}

@@ -6,15 +6,16 @@
   --foreground-secondary: #86868b;
   --foreground-tertiary: #aeaeb2;
 
-  /* Monochrome opacity levels for subgrids */
-  --grid-opacity-1: rgba(0, 0, 0, 0.015);
-  --grid-opacity-2: rgba(0, 0, 0, 0.025);
-  --grid-opacity-3: rgba(0, 0, 0, 0.035);
-  --grid-opacity-4: rgba(0, 0, 0, 0.045);
-  --grid-opacity-5: rgba(0, 0, 0, 0.055);
-  --grid-opacity-6: rgba(0, 0, 0, 0.065);
-  --grid-opacity-7: rgba(0, 0, 0, 0.075);
-  --grid-opacity-8: rgba(0, 0, 0, 0.085);
+  /* Accent color - Red */
+  --accent-red: #E53935;
+  --accent-red-light: rgba(229, 57, 53, 0.08);
+  --accent-red-hover: rgba(229, 57, 53, 0.12);
+
+  /* Monochrome system */
+  --mono-subtle: rgba(0, 0, 0, 0.02);
+  --mono-light: rgba(0, 0, 0, 0.04);
+  --mono-border: rgba(0, 0, 0, 0.08);
+  --mono-border-strong: rgba(0, 0, 0, 0.15);
 
   /* Refined shadows - Apple-like */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -95,15 +96,17 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--foreground-tertiary);
 }
 
-/* Grid opacity utilities */
-.grid-bg-1 { background: var(--grid-opacity-1); }
-.grid-bg-2 { background: var(--grid-opacity-2); }
-.grid-bg-3 { background: var(--grid-opacity-3); }
-.grid-bg-4 { background: var(--grid-opacity-4); }
-.grid-bg-5 { background: var(--grid-opacity-5); }
-.grid-bg-6 { background: var(--grid-opacity-6); }
-.grid-bg-7 { background: var(--grid-opacity-7); }
-.grid-bg-8 { background: var(--grid-opacity-8); }
+/* Accent red utilities */
+.accent-red { color: var(--accent-red); }
+.accent-red-bg { background: var(--accent-red); }
+.accent-red-bg-light { background: var(--accent-red-light); }
+.accent-red-border { border-color: var(--accent-red); }
+
+/* Monochrome utilities */
+.mono-subtle { background: var(--mono-subtle); }
+.mono-light { background: var(--mono-light); }
+.mono-border { border-color: var(--mono-border); }
+.mono-border-strong { border-color: var(--mono-border-strong); }
 
 /* Focus styles */
 *:focus-visible {

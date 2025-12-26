@@ -1,4 +1,15 @@
-import { ArchetypeType, InterviewAnswer, Pillar } from '@/types/mandalart';
+import { ArchetypeType, InterviewAnswer, Pillar, QuickContext } from '@/types/mandalart';
+
+// Helper to format quick context for prompts
+const formatQuickContext = (context: QuickContext | null) => {
+  if (!context) return '';
+  return `
+사용자 맥락:
+- 집중 영역: ${context.lifeAreas.join(', ')}
+- 현재 상황: ${context.currentStatus}
+- 목표 스타일: ${context.goalStyle}
+- 올해 키워드: ${context.yearKeyword}`;
+};
 
 export const SYSTEM_PERSONA = `
 당신은 인격적 라이프 설계자입니다.
@@ -40,10 +51,11 @@ JSON 형식으로 응답:
 `;
 
 // Archetype Detection
-export const ARCHETYPE_DETECTION = (goal: string) => `
+export const ARCHETYPE_DETECTION = (goal: string, quickContext?: QuickContext | null) => `
 ${SYSTEM_PERSONA}
 
 사용자의 목표를 분석하여 4가지 유형 중 하나로 분류하세요.
+${formatQuickContext(quickContext || null)}
 
 유형:
 - BUSINESS: 사업, 커리어, 매출, 성과, 승진, 수익 관련
@@ -61,7 +73,7 @@ JSON 형식으로 응답:
 }
 `;
 
-// Interview Questions by Archetype
+// Interview Questions by Archetype (fallback)
 export const INTERVIEW_QUESTIONS: Record<ArchetypeType, string[]> = {
   BUSINESS: [
     '이 목표를 이루었을 때, 당신의 하루는 어떻게 달라져 있을까요?',
@@ -84,6 +96,38 @@ export const INTERVIEW_QUESTIONS: Record<ArchetypeType, string[]> = {
     '지금의 루틴에서 가장 먼저 바꾸고 싶은 것은 무엇인가요?',
   ],
 };
+
+// Dynamic Interview Question Generation
+export const INTERVIEW_QUESTION_GENERATION = (
+  archetype: ArchetypeType,
+  goal: string,
+  quickContext: QuickContext | null,
+  previousAnswers: InterviewAnswer[]
+) => `
+${SYSTEM_PERSONA}
+
+사용자의 목표와 맥락에 맞는 심층 인터뷰 질문 3개를 생성해주세요.
+${formatQuickContext(quickContext)}
+
+목표 유형: ${archetype}
+목표: "${goal}"
+${previousAnswers.length > 0 ? `
+이전 답변:
+${previousAnswers.map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`).join('\n\n')}
+` : ''}
+
+질문 설계 원칙:
+- 사용자의 구체적인 목표와 맥락을 반영한 맞춤형 질문
+- 열린 질문으로 사용자가 자신의 동기와 가치를 탐색하게 유도
+- 너무 추상적이거나 철학적이지 않게, 실질적으로 답변할 수 있는 질문
+- 각 질문은 서로 다른 측면을 탐색 (동기/감정/실천/관계 등)
+${previousAnswers.length > 0 ? '- 이전 답변을 바탕으로 더 깊이 들어가는 후속 질문' : ''}
+
+JSON 형식으로 응답:
+{
+  "questions": ["질문1", "질문2", "질문3"]
+}
+`;
 
 // Interview Summary
 export const INTERVIEW_SUMMARY = (
@@ -115,11 +159,13 @@ JSON 형식으로 응답:
 export const PILLAR_SUGGESTION = (
   archetype: ArchetypeType,
   goal: string,
-  vibeSummary: string
+  vibeSummary: string,
+  quickContext?: QuickContext | null
 ) => `
 ${SYSTEM_PERSONA}
 
 사용자의 목표와 성향을 바탕으로 목표 달성을 위한 12개의 전략 카테고리를 제안해주세요.
+${formatQuickContext(quickContext || null)}
 
 목표 유형: ${archetype}
 목표: "${goal}"
@@ -181,11 +227,13 @@ JSON 형식:
 export const ACTION_SUGGESTION = (
   goal: string,
   vibeSummary: string,
-  pillar: Pillar
+  pillar: Pillar,
+  quickContext?: QuickContext | null
 ) => `
 ${SYSTEM_PERSONA}
 
 사용자의 목표와 선택한 전략 영역에 대해 12개의 구체적인 실천 지침을 제안해주세요.
+${formatQuickContext(quickContext || null)}
 
 목표: "${goal}"
 사용자 성향: "${vibeSummary}"
@@ -193,8 +241,14 @@ ${SYSTEM_PERSONA}
 
 중요 규칙:
 - "최선을 다하기", "꾸준히 노력하기" 같은 추상적 표현 절대 금지
-- "매일 저녁 8시, 아이와 10분 대화하기" 같은 구체적 실천 방법 사용
-- 시간, 장소, 횟수, 방법이 명확해야 함
+- 행동 중심의 구체적 표현 사용
+- 다양한 유형의 액션을 균형있게 포함:
+  * 일회성 행동 (예: "러닝화 구매하기", "멘토에게 연락하기")
+  * 습관 형성 (예: "아침 스트레칭 5분", "주 3회 30분 걷기")
+  * 마일스톤 (예: "5km 러닝 완주", "자격증 시험 응시")
+  * 환경 조성 (예: "책상 정리", "운동복 눈에 띄게 배치")
+  * 관계/경험 (예: "러닝 크루 참여", "가족과 주말 산책")
+- 모든 액션에 시간/빈도를 강제하지 말 것
 - 사용자의 삶의 결에 맞는 현실적인 제안
 - 각 액션은 20자 이내로 간결하게
 
@@ -226,7 +280,9 @@ ${selectedActions.map((a) => `- ${a}`).join('\n')}
 중요 규칙:
 - 이미 선택된 액션과 중복되지 않아야 합니다
 - "최선을 다하기" 같은 추상적 표현 절대 금지
-- 구체적인 시간, 장소, 횟수, 방법 포함
+- 행동 중심의 구체적 표현 사용
+- 다양한 유형 포함 (일회성 행동, 습관, 마일스톤, 환경 조성, 관계/경험)
+- 모든 액션에 시간/빈도를 강제하지 말 것
 - 각 액션은 20자 이내로 간결하게
 
 JSON 형식:
@@ -252,8 +308,14 @@ ${selectedPillars.map((p, i) => `${i + 1}. ${p.title}: ${p.description}`).join('
 
 중요 규칙:
 - "최선을 다하기", "꾸준히 노력하기" 같은 추상적 표현 절대 금지
-- "매일 저녁 8시, 아이와 10분 대화하기" 같은 구체적 실천 방법 사용
-- 시간, 장소, 횟수, 방법이 명확해야 함
+- 행동 중심의 구체적 표현 사용
+- 다양한 유형의 액션을 균형있게 포함:
+  * 일회성 행동 (예: "러닝화 구매하기")
+  * 습관 형성 (예: "아침 스트레칭 5분")
+  * 마일스톤 (예: "5km 러닝 완주")
+  * 환경 조성 (예: "운동복 눈에 띄게 배치")
+  * 관계/경험 (예: "러닝 크루 참여")
+- 모든 액션에 시간/빈도를 강제하지 말 것
 - 사용자의 삶의 결에 맞는 현실적인 제안
 - 각 액션은 20자 이내로 간결하게
 

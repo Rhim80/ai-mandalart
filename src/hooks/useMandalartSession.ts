@@ -9,6 +9,7 @@ import {
   InterviewAnswer,
   Pillar,
   SubGrid,
+  QuickContext,
 } from '@/types/mandalart';
 
 const STORAGE_KEY = 'ai-mandalart-session';
@@ -39,6 +40,14 @@ export function useMandalartSession() {
 
   const setStep = useCallback((step: SessionStep) => {
     setSession((prev) => ({ ...prev, currentStep: step }));
+  }, []);
+
+  const setQuickContext = useCallback((context: QuickContext) => {
+    setSession((prev) => ({
+      ...prev,
+      quickContext: context,
+      currentStep: 'GOAL_INPUT',
+    }));
   }, []);
 
   const setGoal = useCallback((goal: string) => {
@@ -92,22 +101,28 @@ export function useMandalartSession() {
     setSession((prev) => ({ ...prev, suggestedPillars: pillars }));
   }, []);
 
-  const togglePillarSelection = useCallback((pillarId: string) => {
+  const togglePillarSelection = useCallback((pillarId: string, customPillar?: Pillar) => {
     setSession((prev) => {
       const isSelected = prev.selectedPillars.some((p) => p.id === pillarId);
-      const pillar = prev.suggestedPillars.find((p) => p.id === pillarId);
+      // Use customPillar if provided (for user-added pillars), otherwise find from suggested
+      const pillar = customPillar || prev.suggestedPillars.find((p) => p.id === pillarId);
 
       if (!pillar) return prev;
 
       if (isSelected) {
+        // When deselecting, remove and reassign colorIndex to remaining pillars
+        const remaining = prev.selectedPillars.filter((p) => p.id !== pillarId);
+        const reindexed = remaining.map((p, idx) => ({ ...p, colorIndex: idx + 1 }));
         return {
           ...prev,
-          selectedPillars: prev.selectedPillars.filter((p) => p.id !== pillarId),
+          selectedPillars: reindexed,
         };
       } else if (prev.selectedPillars.length < 8) {
+        // Assign colorIndex based on selection order (1-8)
+        const newColorIndex = prev.selectedPillars.length + 1;
         return {
           ...prev,
-          selectedPillars: [...prev.selectedPillars, pillar],
+          selectedPillars: [...prev.selectedPillars, { ...pillar, colorIndex: newColorIndex }],
         };
       }
       return prev;
@@ -152,6 +167,7 @@ export function useMandalartSession() {
     error,
     setError,
     setStep,
+    setQuickContext,
     setGoal,
     setArchetype,
     addInterviewAnswer,

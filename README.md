@@ -8,7 +8,7 @@
 
 #### Phase 1: 프로젝트 셋업
 - Next.js 16 (App Router, Turbopack) 프로젝트 생성
-- 의존성 설치: `framer-motion`, `openai`, `html2canvas`
+- 의존성 설치: `framer-motion`, `openai`, `modern-screenshot`
 - Pretendard (한글) + Geist (영문) 폰트 설정
 - 모노크롬 미니멀리즘 디자인 시스템 구축
 
@@ -47,7 +47,7 @@
    - 9x9 그리드 (중심 목표 + 8개 서브그리드)
    - 각 서브그리드: 3x3 (제목 + 8개 액션)
    - 클릭하여 상세 보기
-   - 이미지 내보내기 (html2canvas)
+   - 이미지 내보내기 (modern-screenshot) + 워터마크
    - 공유 기능 (Web Share API)
 
 #### Phase 3: 디자인 업그레이드 (Apple 스타일)
@@ -69,7 +69,7 @@
 | 애니메이션 | Framer Motion |
 | AI | OpenAI GPT-4o |
 | 폰트 | Pretendard (KOR), Geist (EN) |
-| 이미지 내보내기 | html2canvas |
+| 이미지 내보내기 | modern-screenshot |
 | 상태 관리 | React useState + LocalStorage |
 
 ---
@@ -211,6 +211,14 @@ npm run dev
 
 ## 주요 개선 사항 (2025-12-26)
 
+### 4. 바이럴 확산 기능
+- **이미지 워터마크**: 저장되는 이미지 하단에 자동 삽입
+  - `claude-code.imiwork.com | Sense & AI 오픈채팅방`
+- **앱 푸터**: 오픈채팅방 링크 추가
+  - "AI 활용에 관심 있다면 함께해요"
+  - [Sense & AI 오픈채팅방](https://open.kakao.com/o/gyWjLY6h)
+- **modern-screenshot** 라이브러리로 이미지 내보내기 개선
+
 ### 1. Pillar 재생성 기능
 - 12개 중 마음에 드는 것만 선택
 - 선택 안한 항목만 AI가 새로운 옵션으로 교체
@@ -232,8 +240,237 @@ npm run dev
 
 ---
 
+## 연동 정보
+
+| 항목 | 값 |
+|------|-----|
+| 블로그 | [claude-code.imiwork.com](https://claude-code.imiwork.com) |
+| 오픈채팅방 | [Sense & AI](https://open.kakao.com/o/gyWjLY6h) |
+
+---
+
+---
+
+## 2025-12-27 업데이트: Quick Context & 동적 인터뷰
+
+### 문제 인식
+> "목표를 적으세요" 라는 빈 입력창은 사용자에게 **백지 공포**를 줄 수 있다.
+> 또한 AI가 사용자를 **다층적으로 이해**해야 더 좋은 제안을 할 수 있다.
+
+### 해결: Phase 5 - Quick Context 시스템
+
+#### 핵심 아이디어
+```
+빈 종이 공포 → 가이드된 시작
+고정 질문 → 맞춤형 동적 질문
+```
+
+목표 입력 전에 2-3개 칩을 선택하는 **Quick Context** 단계를 추가하여:
+1. 사용자가 더 쉽게 시작할 수 있도록 안내
+2. AI가 사용자 맥락을 이해하고 더 맞춤형 제안 가능
+
+#### 구현 내용
+
+**Step 1: Quick Context 타입 정의**
+```typescript
+// src/types/mandalart.ts
+export interface QuickContext {
+  lifeAreas: string[];      // 복수 선택: 커리어, 건강, 관계, 재정, 자기계발, 취미
+  currentStatus: string;    // 단일: 학생, 직장인, 창업자, 프리랜서, 구직중, 기타
+  goalStyle: string;        // 단일: 도전적, 안정적, 실험적, 회복/재충전
+  yearKeyword: string;      // 단일: 성장, 변화, 안정, 도전, 균형, 회복
+}
+
+export const QUICK_CONTEXT_OPTIONS = {
+  lifeAreas: ['커리어', '건강', '관계', '재정', '자기계발', '취미'],
+  currentStatus: ['학생', '직장인', '창업자', '프리랜서', '구직중', '기타'],
+  goalStyle: ['도전적', '안정적', '실험적', '회복/재충전'],
+  yearKeyword: ['성장', '변화', '안정', '도전', '균형', '회복'],
+};
+```
+
+**Step 2: QuickContext 컴포넌트 생성**
+- 4개 카테고리별 칩 선택 UI
+- 삶의 영역만 복수 선택, 나머지는 단일 선택
+- 선택된 칩에 빨강 테두리 강조 (모노크롬 + 빨강 디자인)
+- 모든 카테고리 선택 완료 시 "다음" 버튼 활성화
+
+**Step 3: 세션 훅 업데이트**
+```typescript
+// useMandalartSession.ts
+const setQuickContext = useCallback((context: QuickContext) => {
+  setSession((prev) => ({
+    ...prev,
+    quickContext: context,
+    currentStep: 'GOAL_INPUT',  // 자동으로 다음 단계로
+  }));
+}, []);
+```
+
+**Step 4: GoalInput 개선**
+- Quick Context 기반 동적 플레이스홀더
+- 예: "커리어" 선택 → "커리어에서 이루고 싶은 목표를 적어주세요"
+- 예: "성장" 키워드 → "성장을 향한 도전적 목표를 만들어보세요"
+
+**Step 5: AI 프롬프트에 맥락 반영**
+```typescript
+// prompts.ts
+const formatQuickContext = (context: QuickContext | null) => {
+  if (!context) return '';
+  return `
+사용자 맥락:
+- 집중 영역: ${context.lifeAreas.join(', ')}
+- 현재 상황: ${context.currentStatus}
+- 목표 스타일: ${context.goalStyle}
+- 올해 키워드: ${context.yearKeyword}`;
+};
+```
+
+적용된 프롬프트:
+- `ARCHETYPE_DETECTION` - 목표 유형 분류 시 맥락 반영
+- `PILLAR_SUGGESTION` - 전략 카테고리 제안 시 맥락 반영
+- `ACTION_SUGGESTION` - 실천 항목 제안 시 맥락 반영
+
+---
+
+### 추가 개선: 동적 인터뷰 질문 생성
+
+#### 기존 문제
+심층 인터뷰 질문이 아키타입별로 **고정**되어 있어서:
+- 사용자의 구체적인 목표를 반영하지 못함
+- 맥락과 무관한 일반적인 질문
+
+#### 해결
+목표와 Quick Context를 반영한 **동적 질문 생성**:
+
+```typescript
+// prompts.ts
+export const INTERVIEW_QUESTION_GENERATION = (
+  archetype: ArchetypeType,
+  goal: string,
+  quickContext: QuickContext | null,
+  previousAnswers: InterviewAnswer[]
+) => `
+${SYSTEM_PERSONA}
+
+사용자의 목표와 맥락에 맞는 심층 인터뷰 질문 3개를 생성해주세요.
+${formatQuickContext(quickContext)}
+
+목표 유형: ${archetype}
+목표: "${goal}"
+
+질문 설계 원칙:
+- 사용자의 구체적인 목표와 맥락을 반영한 맞춤형 질문
+- 열린 질문으로 사용자가 자신의 동기와 가치를 탐색하게 유도
+- 너무 추상적이거나 철학적이지 않게, 실질적으로 답변할 수 있는 질문
+- 각 질문은 서로 다른 측면을 탐색 (동기/감정/실천/관계 등)
+
+JSON 형식으로 응답:
+{
+  "questions": ["질문1", "질문2", "질문3"]
+}
+`;
+```
+
+#### API 변경
+```typescript
+// interview/route.ts
+if (action === 'getQuestions') {
+  const prompt = INTERVIEW_QUESTION_GENERATION(archetype, goal, quickContext, []);
+  const result = await callOpenAI<InterviewQuestionsResponse>(prompt);
+  return NextResponse.json({ questions: result.questions });
+}
+```
+
+#### 컴포넌트 변경
+```typescript
+// InterviewStep.tsx
+useEffect(() => {
+  // 마운트 시 AI가 맞춤형 질문 3개 한번에 생성
+  fetch('/api/interview', {
+    body: JSON.stringify({
+      action: 'getQuestions',  // 새 액션
+      archetype, goal, quickContext,
+    }),
+  });
+}, [archetype, goal, quickContext]);
+```
+
+---
+
+### 새로운 사용자 플로우
+
+```
+[Quick Context] ─── 칩 선택 (10초)
+       │
+       ├── 삶의 영역 (복수 선택): 커리어, 건강, 관계...
+       ├── 현재 상황 (단일): 학생, 직장인, 창업자...
+       ├── 목표 스타일 (단일): 도전적, 안정적, 실험적...
+       └── 올해 키워드 (단일): 성장, 변화, 도전...
+       │
+       ↓
+[Goal Input] ─── 맥락 기반 플레이스홀더
+       │
+       ↓
+[Archetype 분류] ─── Quick Context 반영
+       │
+       ↓
+[심층 인터뷰] ─── 목표+맥락 기반 동적 질문 3개
+       │
+       ↓
+[전략 선택] ─── Quick Context 반영된 제안
+       │
+       ↓
+[액션 선택] ─── Quick Context 반영된 제안
+       │
+       ↓
+[만다라트 완성]
+```
+
+---
+
+### 파일 변경 요약
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `types/mandalart.ts` | QuickContext 인터페이스, 옵션 상수, 세션에 quickContext 추가 |
+| `components/QuickContext.tsx` | **신규** - 칩 선택 UI 컴포넌트 |
+| `hooks/useMandalartSession.ts` | setQuickContext 함수 추가 |
+| `components/GoalInput.tsx` | quickContext prop, 동적 플레이스홀더/서브타이틀 |
+| `lib/prompts.ts` | formatQuickContext 헬퍼, INTERVIEW_QUESTION_GENERATION 프롬프트 |
+| `app/api/archetype/route.ts` | quickContext 파라미터 수신 |
+| `app/api/interview/route.ts` | getQuestions 액션 추가 (동적 질문 생성) |
+| `components/InterviewStep.tsx` | quickContext prop, 동적 질문 사용 |
+| `components/MandalartBuilder.tsx` | Quick Context 단계 추가, 각 컴포넌트에 quickContext 전달 |
+
+---
+
+### 디자인 디테일
+
+**칩 스타일 (모노크롬 + 빨강)**
+```css
+/* 미선택 */
+.chip {
+  background: white;
+  border: 1px solid rgba(0,0,0,0.15);
+  color: #86868b;
+}
+
+/* 선택됨 */
+.chip.selected {
+  background: white;
+  border: 2px solid #E53935;  /* 빨강 강조 */
+  color: #1d1d1f;
+  font-weight: 500;
+}
+```
+
+---
+
 ## 향후 개선 계획
 
+- [x] Quick Context 시스템 (2025-12-27)
+- [x] 동적 인터뷰 질문 생성 (2025-12-27)
 - [ ] 결과 URL 공유 (query param 인코딩)
 - [ ] PDF 내보내기
 - [ ] 다국어 지원 (EN)

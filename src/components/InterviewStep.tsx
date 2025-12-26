@@ -1,55 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArchetypeType, InterviewAnswer } from '@/types/mandalart';
+import { ArchetypeType, InterviewAnswer, QuickContext } from '@/types/mandalart';
 
 interface InterviewStepProps {
   archetype: ArchetypeType;
   goal: string;
+  quickContext?: QuickContext | null;
   onComplete: (answers: InterviewAnswer[], vibeSummary: string) => void;
 }
 
-export function InterviewStep({ archetype, goal, onComplete }: InterviewStepProps) {
-  const [currentQuestion, setCurrentQuestion] = useState('');
+export function InterviewStep({ archetype, goal, quickContext, onComplete }: InterviewStepProps) {
+  const [questions, setQuestions] = useState<string[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState('');
   const [answers, setAnswers] = useState<InterviewAnswer[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
-  useEffect(() => {
-    fetchQuestion(0);
-  }, [archetype]);
-
-  const fetchQuestion = async (index: number) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'getQuestion',
-          archetype,
-          questionIndex: index,
-        }),
-      });
-      const data = await res.json();
-
-      if (data.isComplete) {
-        await generateSummary();
-      } else {
-        setCurrentQuestion(data.question);
-        setQuestionIndex(data.questionIndex);
-      }
-    } catch (error) {
-      console.error('Failed to fetch question:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateSummary = async () => {
-    setIsLoading(true);
+  // Generate summary function
+  const generateSummary = useCallback(async (finalAnswers: InterviewAnswer[]) => {
+    setIsGeneratingSummary(true);
     try {
       const res = await fetch('/api/interview', {
         method: 'POST',
@@ -58,31 +30,66 @@ export function InterviewStep({ archetype, goal, onComplete }: InterviewStepProp
           action: 'getSummary',
           archetype,
           goal,
-          answers,
+          answers: finalAnswers,
         }),
       });
       const data = await res.json();
-      onComplete(answers, data.vibeSummary);
+      onComplete(finalAnswers, data.vibeSummary);
     } catch (error) {
       console.error('Failed to generate summary:', error);
     } finally {
-      setIsLoading(false);
+      setIsGeneratingSummary(false);
     }
-  };
+  }, [archetype, goal, onComplete]);
 
-  const handleSubmitAnswer = () => {
-    if (!answer.trim()) return;
+  // Fetch all questions dynamically on mount
+  useEffect(() => {
+    const fetchAllQuestions = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/interview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'getQuestions',
+            archetype,
+            goal,
+            quickContext,
+          }),
+        });
+        const data = await res.json();
+        setQuestions(data.questions || []);
+      } catch (error) {
+        console.error('Failed to fetch questions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllQuestions();
+  }, [archetype, goal, quickContext]);
+
+  const handleSubmitAnswer = useCallback(() => {
+    if (!answer.trim() || questions.length === 0) return;
 
     const newAnswer: InterviewAnswer = {
-      question: currentQuestion,
+      question: questions[questionIndex],
       answer: answer.trim(),
     };
     const updatedAnswers = [...answers, newAnswer];
     setAnswers(updatedAnswers);
     setAnswer('');
 
-    fetchQuestion(questionIndex + 1);
-  };
+    if (questionIndex >= questions.length - 1) {
+      // Last question - generate summary
+      generateSummary(updatedAnswers);
+    } else {
+      setQuestionIndex(questionIndex + 1);
+    }
+  }, [answer, answers, questionIndex, questions, generateSummary]);
+
+  const currentQuestion = questions[questionIndex] || '';
+  const showLoading = isLoading || isGeneratingSummary;
 
   return (
     <motion.div
@@ -128,7 +135,7 @@ export function InterviewStep({ archetype, goal, onComplete }: InterviewStepProp
       </div>
 
       <AnimatePresence mode="wait">
-        {isLoading ? (
+        {showLoading ? (
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
@@ -142,7 +149,9 @@ export function InterviewStep({ archetype, goal, onComplete }: InterviewStepProp
               className="w-8 h-8 mx-auto mb-6 border-2 border-black border-t-transparent rounded-full"
             />
             <p className="text-secondary">
-              {questionIndex >= 3 ? '당신의 이야기를 정리하고 있습니다...' : '다음 질문을 준비하고 있습니다...'}
+              {isGeneratingSummary
+                ? '당신의 이야기를 정리하고 있습니다...'
+                : '맞춤형 질문을 준비하고 있습니다...'}
             </p>
           </motion.div>
         ) : (
@@ -198,7 +207,7 @@ export function InterviewStep({ archetype, goal, onComplete }: InterviewStepProp
       </AnimatePresence>
 
       {/* Previous answers */}
-      {answers.length > 0 && (
+      {answers.length > 0 && !showLoading && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

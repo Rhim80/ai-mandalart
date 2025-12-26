@@ -14,6 +14,22 @@ export interface InterviewAnswer {
   answer: string;
 }
 
+// Quick Context (collected before goal input)
+export interface QuickContext {
+  lifeAreas: string[];      // 복수 선택: 커리어, 건강, 관계, 재정, 자기계발, 취미
+  currentStatus: string;    // 단일: 학생, 직장인, 창업자, 프리랜서, 구직중, 기타
+  goalStyle: string;        // 단일: 도전적, 안정적, 실험적, 회복/재충전
+  yearKeyword: string;      // 단일: 성장, 변화, 안정, 도전, 균형, 회복
+}
+
+// Quick Context options
+export const QUICK_CONTEXT_OPTIONS = {
+  lifeAreas: ['커리어', '건강', '관계', '재정', '자기계발', '취미'],
+  currentStatus: ['학생', '직장인', '창업자', '프리랜서', '구직중', '기타'],
+  goalStyle: ['도전적', '안정적', '실험적', '회복/재충전'],
+  yearKeyword: ['성장', '변화', '안정', '도전', '균형', '회복'],
+};
+
 // User context from interview
 export interface UserContext {
   goal: string;
@@ -29,13 +45,15 @@ export interface Pillar {
   title: string;
   description: string;
   selected?: boolean;
+  colorIndex?: number; // 1-8, assigned when selected (selection order)
 }
 
 // SubGrid (one of 8 surrounding grids)
 export interface SubGrid {
   id: string;
   title: string;
-  opacityLevel: number; // 1-8 for grid-bg-1 to grid-bg-8
+  opacityLevel: number; // 1-8 for grid-bg-1 to grid-bg-8 (legacy)
+  colorIndex: number; // 1-8 for pastel-bg-1 to pastel-bg-8
   actions: string[]; // 8 action items
 }
 
@@ -48,6 +66,7 @@ export interface MandalartData {
 // Session state
 export interface MandalartSession {
   projectInfo: ProjectInfo | null;
+  quickContext: QuickContext | null;
   userContext: UserContext | null;
   suggestedPillars: Pillar[];
   selectedPillars: Pillar[];
@@ -60,6 +79,7 @@ export interface MandalartSession {
 
 // Session steps
 export type SessionStep =
+  | 'QUICK_CONTEXT'
   | 'GOAL_INPUT'
   | 'DISCOVERY'
   | 'ARCHETYPE_RESULT'
@@ -71,6 +91,7 @@ export type SessionStep =
 
 // Step metadata
 export const STEP_INFO: Record<SessionStep, { name: string; description: string }> = {
+  QUICK_CONTEXT: { name: '나를 알려주기', description: '당신에 대해 알려주세요' },
   GOAL_INPUT: { name: '목표 입력', description: '핵심 목표를 한 문장으로' },
   DISCOVERY: { name: '목표 발견', description: '나에게 맞는 목표 찾기' },
   ARCHETYPE_RESULT: { name: '유형 분석', description: '목표 성격 파악' },
@@ -128,11 +149,12 @@ export interface ActionsResponse {
 // Initial session state
 export const INITIAL_SESSION: MandalartSession = {
   projectInfo: null,
+  quickContext: null,
   userContext: null,
   suggestedPillars: [],
   selectedPillars: [],
   mandalart: null,
-  currentStep: 'GOAL_INPUT',
+  currentStep: 'QUICK_CONTEXT',
   isDiscoveryMode: false,
   discoveryAnswers: [],
   suggestedGoals: [],

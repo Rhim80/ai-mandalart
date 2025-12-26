@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callOpenAI } from '@/lib/openai';
 import { ARCHETYPE_DETECTION } from '@/lib/prompts';
-import { ArchetypeResponse } from '@/types/mandalart';
+import { ArchetypeResponse, QuickContext } from '@/types/mandalart';
 
 export async function POST(req: NextRequest) {
   try {
-    const { goal } = await req.json();
+    const { goal, quickContext } = await req.json() as { goal: string; quickContext?: QuickContext };
 
     if (!goal || typeof goal !== 'string') {
       return NextResponse.json(
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = ARCHETYPE_DETECTION(goal);
+    const prompt = ARCHETYPE_DETECTION(goal, quickContext);
     const result = await callOpenAI<ArchetypeResponse>(prompt);
 
     return NextResponse.json(result);

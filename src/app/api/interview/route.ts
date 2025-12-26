@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callOpenAI } from '@/lib/openai';
-import { INTERVIEW_QUESTIONS, INTERVIEW_SUMMARY } from '@/lib/prompts';
+import { INTERVIEW_QUESTIONS, INTERVIEW_QUESTION_GENERATION, INTERVIEW_SUMMARY } from '@/lib/prompts';
 import {
   ArchetypeType,
   InterviewAnswer,
   InterviewQuestionResponse,
   InterviewSummaryResponse,
+  QuickContext,
 } from '@/types/mandalart';
+
+interface InterviewQuestionsResponse {
+  questions: string[];
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, archetype, goal, questionIndex, answers } = body as {
-      action: 'getQuestion' | 'getSummary';
+    const { action, archetype, goal, questionIndex, answers, quickContext } = body as {
+      action: 'getQuestion' | 'getQuestions' | 'getSummary';
       archetype: ArchetypeType;
       goal?: string;
       questionIndex?: number;
       answers?: InterviewAnswer[];
+      quickContext?: QuickContext;
     };
 
     if (!archetype || !INTERVIEW_QUESTIONS[archetype]) {
@@ -24,6 +30,25 @@ export async function POST(req: NextRequest) {
         { error: 'Valid archetype is required' },
         { status: 400 }
       );
+    }
+
+    // Generate all 3 questions dynamically at once
+    if (action === 'getQuestions') {
+      if (!goal) {
+        return NextResponse.json(
+          { error: 'Goal is required for dynamic questions' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const prompt = INTERVIEW_QUESTION_GENERATION(archetype, goal, quickContext || null, []);
+        const result = await callOpenAI<InterviewQuestionsResponse>(prompt);
+        return NextResponse.json({ questions: result.questions });
+      } catch {
+        // Fallback to static questions
+        return NextResponse.json({ questions: INTERVIEW_QUESTIONS[archetype] });
+      }
     }
 
     if (action === 'getQuestion') {

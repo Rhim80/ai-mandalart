@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pillar, SubGrid } from '@/types/mandalart';
 
+// Accent red color
+const ACCENT_RED = '#E53935';
+
 interface ActionSelectionProps {
   selectedPillars: Pillar[];
   goal: string;
@@ -11,10 +14,15 @@ interface ActionSelectionProps {
   onComplete: (subGrids: SubGrid[]) => void;
 }
 
+interface ActionItem {
+  id: string;
+  text: string;
+}
+
 interface PillarProgress {
   pillarIndex: number;
-  suggestedActions: string[];
-  selectedActions: string[];
+  suggestedActions: ActionItem[];
+  selectedActions: ActionItem[];
   isLoading: boolean;
 }
 
@@ -33,11 +41,21 @@ export function ActionSelection({
   });
   const [completedSubGrids, setCompletedSubGrids] = useState<SubGrid[]>([]);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customActionText, setCustomActionText] = useState('');
 
   const currentPillar = selectedPillars[currentPillarIndex];
   const selectedCount = progress.selectedActions.length;
   const canProceed = selectedCount === 8;
   const isLastPillar = currentPillarIndex === selectedPillars.length - 1;
+
+  // Helper to create ActionItem with unique ID
+  const createActionItems = (actions: string[], prefix: string = ''): ActionItem[] => {
+    return actions.map((text, index) => ({
+      id: `${prefix}${Date.now()}_${index}_${Math.random().toString(36).slice(2, 11)}`,
+      text,
+    }));
+  };
 
   // Fetch actions for current pillar
   const fetchActions = useCallback(async () => {
@@ -57,9 +75,10 @@ export function ActionSelection({
       if (!res.ok) throw new Error('Failed to fetch actions');
 
       const data = await res.json();
+      const actionItems = createActionItems(data.actions || [], 'init_');
       setProgress({
         pillarIndex: currentPillarIndex,
-        suggestedActions: data.actions || [],
+        suggestedActions: actionItems,
         selectedActions: [],
         isLoading: false,
       });
@@ -74,13 +93,13 @@ export function ActionSelection({
   }, [fetchActions]);
 
   // Toggle action selection
-  const toggleAction = (action: string) => {
+  const toggleAction = (action: ActionItem) => {
     setProgress((prev) => {
-      const isSelected = prev.selectedActions.includes(action);
+      const isSelected = prev.selectedActions.some((a) => a.id === action.id);
       if (isSelected) {
         return {
           ...prev,
-          selectedActions: prev.selectedActions.filter((a) => a !== action),
+          selectedActions: prev.selectedActions.filter((a) => a.id !== action.id),
         };
       } else if (prev.selectedActions.length < 8) {
         return {
@@ -90,6 +109,24 @@ export function ActionSelection({
       }
       return prev;
     });
+  };
+
+  // Add custom action
+  const handleAddCustomAction = () => {
+    if (!customActionText.trim() || selectedCount >= 8) return;
+
+    const newAction: ActionItem = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      text: customActionText.trim(),
+    };
+
+    setProgress((prev) => ({
+      ...prev,
+      suggestedActions: [...prev.suggestedActions, newAction],
+      selectedActions: [...prev.selectedActions, newAction],
+    }));
+    setCustomActionText('');
+    setShowCustomInput(false);
   };
 
   // Regenerate unselected actions
@@ -106,7 +143,7 @@ export function ActionSelection({
           goal,
           vibeSummary,
           pillar: currentPillar,
-          selectedActions: progress.selectedActions,
+          selectedActions: progress.selectedActions.map((a) => a.text),
           count: unselectedCount,
         }),
       });
@@ -114,11 +151,12 @@ export function ActionSelection({
       if (!res.ok) throw new Error('Failed to regenerate actions');
 
       const data = await res.json();
+      const newActionItems = createActionItems(data.actions || [], 'regen_');
 
       // Keep selected actions, replace unselected ones
       setProgress((prev) => ({
         ...prev,
-        suggestedActions: [...prev.selectedActions, ...(data.actions || [])],
+        suggestedActions: [...prev.selectedActions, ...newActionItems],
       }));
     } catch (error) {
       console.error('Failed to regenerate actions:', error);
@@ -129,12 +167,14 @@ export function ActionSelection({
 
   // Proceed to next pillar or complete
   const handleProceed = () => {
-    // Save current subgrid
+    // Save current subgrid with colorIndex
+    const colorIndex = currentPillar.colorIndex || currentPillarIndex + 1;
     const newSubGrid: SubGrid = {
       id: `grid_${currentPillarIndex + 1}`,
       title: currentPillar.title,
       opacityLevel: currentPillarIndex + 1,
-      actions: progress.selectedActions,
+      colorIndex,
+      actions: progress.selectedActions.map((a) => a.text),
     };
 
     const updatedSubGrids = [...completedSubGrids, newSubGrid];
@@ -147,8 +187,8 @@ export function ActionSelection({
     }
   };
 
-  const getSelectionOrder = (action: string) => {
-    const index = progress.selectedActions.indexOf(action);
+  const getSelectionOrder = (action: ActionItem) => {
+    const index = progress.selectedActions.findIndex((a) => a.id === action.id);
     return index >= 0 ? index + 1 : null;
   };
 
@@ -164,7 +204,8 @@ export function ActionSelection({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-sm tracking-[0.3em] text-secondary uppercase mb-4"
+          className="text-sm tracking-[0.3em] uppercase mb-4"
+          style={{ color: ACCENT_RED }}
         >
           Step 4
         </motion.p>
@@ -172,27 +213,31 @@ export function ActionSelection({
           실천 항목 선택
         </h2>
 
-        {/* Overall progress */}
+        {/* Overall progress - monochrome */}
         <div className="flex items-center justify-center gap-3 mt-6 mb-2">
-          {selectedPillars.map((pillar, i) => (
-            <motion.div
-              key={pillar.id}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className={`
-                w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all
-                ${i < currentPillarIndex
-                  ? 'bg-black text-white'
-                  : i === currentPillarIndex
-                  ? 'bg-black text-white ring-4 ring-black/20'
-                  : 'bg-black/10 text-black/40'
-                }
-              `}
-            >
-              {i + 1}
-            </motion.div>
-          ))}
+          {selectedPillars.map((pillar, i) => {
+            const isCompleted = i < currentPillarIndex;
+            const isCurrent = i === currentPillarIndex;
+
+            return (
+              <motion.div
+                key={pillar.id}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                style={{
+                  backgroundColor: isCurrent ? ACCENT_RED : isCompleted ? '#1d1d1f' : 'rgba(0,0,0,0.1)',
+                }}
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all
+                  ${isCurrent ? 'ring-4 ring-red-200' : ''}
+                  ${isCompleted || isCurrent ? 'text-white' : 'text-black/40'}
+                `}
+              >
+                {i + 1}
+              </motion.div>
+            );
+          })}
         </div>
         <p className="text-secondary">
           {currentPillarIndex + 1} / {selectedPillars.length} 영역
@@ -208,17 +253,17 @@ export function ActionSelection({
           exit={{ opacity: 0, x: -50 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Pillar title */}
+          {/* Pillar title - black background */}
           <div className="text-center mb-8">
             <motion.div
-              className="inline-block px-6 py-3 bg-black text-white mb-4"
+              className="inline-block px-6 py-3 mb-4 bg-black shadow-lg"
               layoutId="pillar-title"
             >
-              <h3 className="text-xl font-medium">{currentPillar.title}</h3>
+              <h3 className="text-xl font-medium text-white">{currentPillar.title}</h3>
             </motion.div>
             <p className="text-secondary">{currentPillar.description}</p>
 
-            {/* Action progress */}
+            {/* Action progress - monochrome */}
             <div className="flex items-center justify-center gap-2 mt-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <motion.div
@@ -226,10 +271,10 @@ export function ActionSelection({
                   initial={{ scale: 0 }}
                   animate={{
                     scale: 1,
-                    backgroundColor: i < selectedCount ? '#000' : 'rgba(0,0,0,0.1)'
+                    backgroundColor: i < selectedCount ? '#1d1d1f' : 'rgba(0,0,0,0.1)'
                   }}
                   transition={{ delay: i * 0.03 }}
-                  className="w-2 h-2 rounded-full"
+                  className="w-2.5 h-2.5 rounded-full"
                 />
               ))}
               <span className="ml-2 text-sm text-secondary">{selectedCount}/8</span>
@@ -261,7 +306,7 @@ export function ActionSelection({
 
                     return (
                       <motion.button
-                        key={action}
+                        key={action.id}
                         layout
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -290,10 +335,67 @@ export function ActionSelection({
                             </motion.span>
                           )}
                         </AnimatePresence>
-                        {action}
+                        {action.text}
                       </motion.button>
                     );
                   })}
+
+                  {/* Custom input card */}
+                  {selectedCount < 8 && (
+                    <motion.div
+                      key="custom-action-input"
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="relative"
+                    >
+                      {showCustomInput ? (
+                        <div className="p-3 bg-white border-2 border-dashed border-black/20 rounded-sm">
+                          <input
+                            type="text"
+                            value={customActionText}
+                            onChange={(e) => setCustomActionText(e.target.value)}
+                            placeholder="실천 항목 입력"
+                            className="w-full mb-2 px-2 py-1.5 text-sm border border-black/10 rounded focus:outline-none focus:border-black/30"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddCustomAction();
+                              if (e.key === 'Escape') {
+                                setShowCustomInput(false);
+                                setCustomActionText('');
+                              }
+                            }}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleAddCustomAction}
+                              disabled={!customActionText.trim()}
+                              className="flex-1 py-1 text-xs bg-black text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              추가
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowCustomInput(false);
+                                setCustomActionText('');
+                              }}
+                              className="flex-1 py-1 text-xs border border-black/20 text-secondary hover:text-black"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowCustomInput(true)}
+                          className="w-full h-full min-h-[80px] p-4 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-black/20 rounded-sm text-secondary hover:border-black/40 hover:text-black transition-all cursor-pointer"
+                        >
+                          <span className="text-xl">+</span>
+                          <span className="text-xs">직접 추가</span>
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </motion.div>
 
@@ -356,7 +458,7 @@ export function ActionSelection({
         </motion.div>
       </AnimatePresence>
 
-      {/* Completed pillars preview */}
+      {/* Completed pillars preview - monochrome */}
       {completedSubGrids.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -368,7 +470,7 @@ export function ActionSelection({
             {completedSubGrids.map((grid) => (
               <span
                 key={grid.id}
-                className="px-3 py-1.5 bg-black/5 text-sm"
+                className="px-3 py-1.5 text-sm bg-white border border-black/15 shadow-sm"
               >
                 {grid.title}
               </span>
