@@ -16,6 +16,7 @@ export interface InterviewAnswer {
 
 // Quick Context (collected before goal input)
 export interface QuickContext {
+  nickname: string;         // 닉네임 (결과 이미지에 표시)
   lifeAreas: string[];      // 복수 선택: 커리어, 건강, 관계, 재정, 자기계발, 취미
   currentStatus: string;    // 단일: 학생, 직장인, 창업자, 프리랜서, 구직중, 기타
   goalStyle: string;        // 단일: 도전적, 안정적, 실험적, 회복/재충전

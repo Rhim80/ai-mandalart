@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { QuickContext } from '@/types/mandalart';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface GoalInputProps {
   onSubmit: (goal: string) => void;
@@ -12,35 +13,43 @@ interface GoalInputProps {
 }
 
 export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }: GoalInputProps) {
+  const { t, language } = useLanguage();
   const [goal, setGoal] = useState('');
 
   // Generate dynamic placeholder based on quick context
   const getPlaceholder = () => {
-    if (!quickContext) return '2026년에 이루고 싶은 목표를 한 문장으로 적어주세요';
+    if (!quickContext) return t('goalInput.placeholder');
 
     const area = quickContext.lifeAreas[0] || '';
     const keyword = quickContext.yearKeyword || '';
 
-    const hints: Record<string, string> = {
-      '커리어': '커리어에서 이루고 싶은 목표를 적어주세요',
-      '건강': '건강 관련 목표를 적어주세요',
-      '관계': '관계에서 이루고 싶은 목표를 적어주세요',
-      '재정': '재정 목표를 적어주세요',
-      '자기계발': '자기계발 목표를 적어주세요',
-      '취미': '취미 관련 목표를 적어주세요',
-    };
-
-    return hints[area] || `${keyword}을 위한 2026년 목표를 적어주세요`;
+    if (language === 'ko') {
+      const hints: Record<string, string> = {
+        '커리어': '커리어에서 이루고 싶은 목표를 적어주세요',
+        '건강': '건강 관련 목표를 적어주세요',
+        '관계': '관계에서 이루고 싶은 목표를 적어주세요',
+        '재정': '재정 목표를 적어주세요',
+        '자기계발': '자기계발 목표를 적어주세요',
+        '취미': '취미 관련 목표를 적어주세요',
+      };
+      return hints[area] || `${keyword}을 위한 2026년 목표를 적어주세요`;
+    } else {
+      // For English, use the generic placeholder
+      return t('goalInput.placeholder');
+    }
   };
 
   // Generate subtitle based on context
   const getSubtitle = () => {
-    if (!quickContext) return '당신의 목표를 81개의 구체적인 실천 계획으로';
+    if (!quickContext) return t('goalInput.subtitle');
 
-    const style = quickContext.goalStyle;
-    const keyword = quickContext.yearKeyword;
-
-    return `${keyword}을 향한 ${style} 목표를 만들어보세요`;
+    if (language === 'ko') {
+      const style = quickContext.goalStyle;
+      const keyword = quickContext.yearKeyword;
+      return `${keyword}을 향한 ${style} 목표를 만들어보세요`;
+    } else {
+      return t('goalInput.subtitle');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -66,10 +75,10 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }
           transition={{ delay: 0.1, duration: 0.5 }}
         >
           <h1 className="text-5xl md:text-6xl font-extralight mb-6 tracking-tight">
-            AI Mandalart
+            {t('goalInput.title')}
           </h1>
           <p className="text-xl text-secondary font-light leading-relaxed">
-            {getSubtitle().split(' ').slice(0, 3).join(' ')}<br className="md:hidden" /> {getSubtitle().split(' ').slice(3).join(' ')}
+            {getSubtitle()}
           </p>
         </motion.div>
       </div>
@@ -120,10 +129,10 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }
             {isLoading ? (
               <span className="flex items-center justify-center gap-3">
                 <span className="spinner" />
-                분석 중...
+                {language === 'ko' ? '분석 중...' : 'Analyzing...'}
               </span>
             ) : (
-              '시작하기'
+              t('goalInput.submit')
             )}
           </motion.button>
 
@@ -135,7 +144,7 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }
             whileTap={{ scale: 0.98 }}
             className="text-secondary hover:text-black transition-colors duration-200 text-sm"
           >
-            뭘 해야 할지 모르겠어요
+            {t('goalInput.discovery')}
           </motion.button>
         </motion.div>
       </form>

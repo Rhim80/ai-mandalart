@@ -106,7 +106,7 @@ export const INTERVIEW_QUESTION_GENERATION = (
 ) => `
 ${SYSTEM_PERSONA}
 
-사용자의 목표와 맥락에 맞는 심층 인터뷰 질문 3개를 생성해주세요.
+사용자의 목표에 맞는 전략 영역(Pillar)을 더 잘 제안하기 위해 필요한 실질적인 정보를 수집하는 질문 3개를 생성해주세요.
 ${formatQuickContext(quickContext)}
 
 목표 유형: ${archetype}
@@ -116,12 +116,23 @@ ${previousAnswers.length > 0 ? `
 ${previousAnswers.map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`).join('\n\n')}
 ` : ''}
 
+질문의 목적:
+- 이 질문들의 답변을 바탕으로 8개의 전략 영역(Pillar)을 제안할 것임
+- 따라서 전략 수립에 실질적으로 도움이 되는 정보를 수집해야 함
+
 질문 설계 원칙:
-- 사용자의 구체적인 목표와 맥락을 반영한 맞춤형 질문
-- 열린 질문으로 사용자가 자신의 동기와 가치를 탐색하게 유도
-- 너무 추상적이거나 철학적이지 않게, 실질적으로 답변할 수 있는 질문
-- 각 질문은 서로 다른 측면을 탐색 (동기/감정/실천/관계 등)
-${previousAnswers.length > 0 ? '- 이전 답변을 바탕으로 더 깊이 들어가는 후속 질문' : ''}
+- **실용적 정보 수집**: 현재 상황, 제약 조건, 가용 자원, 우선순위 파악
+- **구체적 질문**: "일주일에 운동에 쓸 수 있는 시간은?" 같은 구체적 질문
+- **금지**: 감정/기분/느낌을 묻는 추상적 질문 ("어떤 기분일까요?", "어떤 의미인가요?")
+- **금지**: 이미 시도했다고 가정하는 질문 ("해본 방법", "실패 경험")
+- **금지**: 철학적/동기 탐색 질문 ("왜 하고 싶으세요?", "무엇이 중요한가요?")
+${previousAnswers.length > 0 ? '- 이전 답변을 바탕으로 더 구체적인 제약/상황 파악' : ''}
+
+좋은 질문 예시:
+- "하루 중 언제 시간을 낼 수 있나요?"
+- "혼자 하는 걸 선호하나요, 함께 하는 걸 선호하나요?"
+- "예산 제약이 있나요?"
+- "집에서 할 수 있어야 하나요, 외부 활동도 괜찮나요?"
 
 JSON 형식으로 응답:
 {
@@ -193,24 +204,30 @@ export const PILLAR_REGENERATION = (
   goal: string,
   vibeSummary: string,
   selectedPillars: Pillar[],
+  rejectedPillars: Pillar[],
   count: number
 ) => `
 ${SYSTEM_PERSONA}
 
-사용자의 목표와 성향을 바탕으로 ${count}개의 새로운 전략 카테고리를 제안해주세요.
+사용자의 목표와 성향을 바탕으로 ${count}개의 **완전히 새로운** 전략 카테고리를 제안해주세요.
 
 목표 유형: ${archetype}
 목표: "${goal}"
 사용자 성향: "${vibeSummary}"
 
-이미 선택된 영역 (중복 제안 금지):
-${selectedPillars.map((p) => `- ${p.title}: ${p.description}`).join('\n')}
+⚠️ 다음 영역들은 이미 제안되었으므로 절대 비슷한 것도 제안하지 마세요:
 
-규칙:
-- 이미 선택된 영역과 중복되지 않아야 합니다
-- 각 카테고리는 실질적이고 구체적인 영역이어야 합니다
-- 사용자의 삶의 맥락에 맞아야 합니다
-- 서로 겹치지 않는 독립적인 영역이어야 합니다
+[이미 선택된 영역 - 중복 제안 금지]:
+${selectedPillars.length > 0 ? selectedPillars.map((p) => `- ${p.title}: ${p.description}`).join('\n') : '(없음)'}
+
+[이전에 제안됐지만 선택되지 않은 영역 - 이것도 피하세요]:
+${rejectedPillars.length > 0 ? rejectedPillars.map((p) => `- ${p.title}: ${p.description}`).join('\n') : '(없음)'}
+
+🎯 창의성 규칙:
+- 위에 나열된 영역과 **완전히 다른 관점**에서 접근하세요
+- 기존 제안의 변형이 아닌, **새로운 각도**의 전략을 제시하세요
+- 예상치 못한 접근법, 독특한 관점을 환영합니다
+- 사용자가 생각하지 못했던 영역을 발굴하세요
 - 제목은 2-4단어로 간결하게
 - 설명은 1문장으로
 
@@ -264,25 +281,31 @@ export const ACTION_REGENERATION = (
   vibeSummary: string,
   pillar: Pillar,
   selectedActions: string[],
+  rejectedActions: string[],
   count: number
 ) => `
 ${SYSTEM_PERSONA}
 
-사용자의 목표와 선택한 전략 영역에 대해 ${count}개의 새로운 실천 지침을 제안해주세요.
+사용자의 목표와 선택한 전략 영역에 대해 ${count}개의 **완전히 새로운** 실천 지침을 제안해주세요.
 
 목표: "${goal}"
 사용자 성향: "${vibeSummary}"
 전략 영역: ${pillar.title} - ${pillar.description}
 
-이미 선택된 액션 (중복 제안 금지):
-${selectedActions.map((a) => `- ${a}`).join('\n')}
+⚠️ 다음 액션들은 이미 제안되었으므로 비슷한 것도 제안하지 마세요:
 
-중요 규칙:
-- 이미 선택된 액션과 중복되지 않아야 합니다
-- "최선을 다하기" 같은 추상적 표현 절대 금지
-- 행동 중심의 구체적 표현 사용
+[이미 선택된 액션]:
+${selectedActions.length > 0 ? selectedActions.map((a) => `- ${a}`).join('\n') : '(없음)'}
+
+[이전에 제안됐지만 선택되지 않은 액션]:
+${rejectedActions.length > 0 ? rejectedActions.map((a) => `- ${a}`).join('\n') : '(없음)'}
+
+🎯 창의성 규칙:
+- 위에 나열된 액션과 **완전히 다른 유형**의 행동을 제안하세요
+- 같은 카테고리 내에서도 **전혀 다른 접근법**을 사용하세요
+- 일반적이지 않은, 독창적인 실천 방법을 환영합니다
 - 다양한 유형 포함 (일회성 행동, 습관, 마일스톤, 환경 조성, 관계/경험)
-- 모든 액션에 시간/빈도를 강제하지 말 것
+- "최선을 다하기" 같은 추상적 표현 절대 금지
 - 각 액션은 20자 이내로 간결하게
 
 JSON 형식:

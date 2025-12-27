@@ -111,6 +111,10 @@ export function MandalartBuilder() {
     selectedPillars: Pillar[],
     count: number
   ): Promise<Pillar[]> => {
+    // Calculate rejected pillars: previously suggested but not selected
+    const selectedIds = new Set(selectedPillars.map(p => p.id));
+    const rejectedPillars = session.suggestedPillars.filter(p => !selectedIds.has(p.id));
+
     const res = await fetch('/api/pillars/regenerate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,6 +123,7 @@ export function MandalartBuilder() {
         goal: session.userContext?.goal,
         vibeSummary: session.userContext?.persona.vibeSummary,
         selectedPillars,
+        rejectedPillars,
         count,
       }),
     });
@@ -141,6 +146,13 @@ export function MandalartBuilder() {
     setStep('RESULT');
   }, [session.userContext?.goal, setMandalart, setStep]);
 
+  // 참고 이미지 스타일 - for export
+  const EXPORT_COLORS = {
+    background: '#F5EEEB',
+    text: '#4a4a4a',
+    textLight: '#888888',
+  };
+
   // Handle export to image
   const handleExport = useCallback(async () => {
     const element = document.getElementById('mandalart-grid');
@@ -148,18 +160,19 @@ export function MandalartBuilder() {
 
     try {
       const dataUrl = await domToPng(element, {
-        scale: 2,
-        backgroundColor: '#ffffff',
+        scale: 4,  // 고해상도 (4x)
+        backgroundColor: EXPORT_COLORS.background,
       });
 
+      const nickname = session.quickContext?.nickname || 'my';
       const link = document.createElement('a');
-      link.download = `mandalart-${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `${nickname}-mandalart-${new Date().toISOString().split('T')[0]}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error('Failed to export:', err);
     }
-  }, []);
+  }, [session.quickContext?.nickname]);
 
   // Handle share
   const handleShare = useCallback(async () => {
@@ -236,6 +249,7 @@ export function MandalartBuilder() {
             archetype={session.projectInfo.archetype}
             reasoning=""
             onContinue={handleArchetypeContinue}
+            onReset={handleReset}
           />
         )}
 
@@ -246,6 +260,7 @@ export function MandalartBuilder() {
             goal={session.userContext.goal}
             quickContext={session.quickContext}
             onComplete={handleInterviewComplete}
+            onReset={handleReset}
           />
         )}
 
@@ -258,6 +273,7 @@ export function MandalartBuilder() {
             onRegenerate={handlePillarRegenerate}
             onComplete={handlePillarComplete}
             isLoading={isLoading}
+            onReset={handleReset}
           />
         )}
 
@@ -268,6 +284,7 @@ export function MandalartBuilder() {
             goal={session.userContext.goal}
             vibeSummary={session.userContext.persona.vibeSummary || ''}
             onComplete={handleActionComplete}
+            onReset={handleReset}
           />
         )}
 
@@ -282,6 +299,7 @@ export function MandalartBuilder() {
           <MandalartGrid
             key="result"
             data={session.mandalart}
+            nickname={session.quickContext?.nickname}
             onExport={handleExport}
             onShare={handleShare}
             onReset={handleReset}

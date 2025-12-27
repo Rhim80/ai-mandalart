@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pillar, SubGrid } from '@/types/mandalart';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Accent red color
 const ACCENT_RED = '#E53935';
@@ -12,6 +13,7 @@ interface ActionSelectionProps {
   goal: string;
   vibeSummary: string;
   onComplete: (subGrids: SubGrid[]) => void;
+  onReset?: () => void;
 }
 
 interface ActionItem {
@@ -31,7 +33,9 @@ export function ActionSelection({
   goal,
   vibeSummary,
   onComplete,
+  onReset,
 }: ActionSelectionProps) {
+  const { t, language } = useLanguage();
   const [currentPillarIndex, setCurrentPillarIndex] = useState(0);
   const [progress, setProgress] = useState<PillarProgress>({
     pillarIndex: 0,
@@ -136,6 +140,12 @@ export function ActionSelection({
 
     setIsRegenerating(true);
     try {
+      // Calculate rejected actions: previously suggested but not selected
+      const selectedIds = new Set(progress.selectedActions.map((a) => a.id));
+      const rejectedActions = progress.suggestedActions
+        .filter((a) => !selectedIds.has(a.id))
+        .map((a) => a.text);
+
       const res = await fetch('/api/actions/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,6 +154,7 @@ export function ActionSelection({
           vibeSummary,
           pillar: currentPillar,
           selectedActions: progress.selectedActions.map((a) => a.text),
+          rejectedActions,
           count: unselectedCount,
         }),
       });
@@ -207,10 +218,10 @@ export function ActionSelection({
           className="text-sm tracking-[0.3em] uppercase mb-4"
           style={{ color: ACCENT_RED }}
         >
-          Step 4
+          {t('actionSelection.step')}
         </motion.p>
         <h2 className="text-4xl font-extralight mb-4 tracking-tight">
-          실천 항목 선택
+          {t('actionSelection.title')}
         </h2>
 
         {/* Overall progress - monochrome */}
@@ -240,7 +251,7 @@ export function ActionSelection({
           })}
         </div>
         <p className="text-secondary">
-          {currentPillarIndex + 1} / {selectedPillars.length} 영역
+          {t('actionSelection.progress', { current: currentPillarIndex + 1, total: selectedPillars.length })}
         </p>
       </div>
 
@@ -289,7 +300,7 @@ export function ActionSelection({
                 transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
                 className="w-8 h-8 border-2 border-black border-t-transparent rounded-full mb-4"
               />
-              <p className="text-secondary">실천 항목을 생성하고 있습니다...</p>
+              <p className="text-secondary">{language === 'ko' ? '실천 항목을 생성하고 있습니다...' : 'Generating action items...'}</p>
             </div>
           ) : (
             <>
@@ -355,7 +366,7 @@ export function ActionSelection({
                             type="text"
                             value={customActionText}
                             onChange={(e) => setCustomActionText(e.target.value)}
-                            placeholder="실천 항목 입력"
+                            placeholder={t('actionSelection.customPlaceholder')}
                             className="w-full mb-2 px-2 py-1.5 text-sm border border-black/10 rounded focus:outline-none focus:border-black/30"
                             autoFocus
                             onKeyDown={(e) => {
@@ -372,7 +383,7 @@ export function ActionSelection({
                               disabled={!customActionText.trim()}
                               className="flex-1 py-1 text-xs bg-black text-white disabled:opacity-30 disabled:cursor-not-allowed"
                             >
-                              추가
+                              {language === 'ko' ? '추가' : 'Add'}
                             </button>
                             <button
                               onClick={() => {
@@ -381,7 +392,7 @@ export function ActionSelection({
                               }}
                               className="flex-1 py-1 text-xs border border-black/20 text-secondary hover:text-black"
                             >
-                              취소
+                              {language === 'ko' ? '취소' : 'Cancel'}
                             </button>
                           </div>
                         </div>
@@ -391,7 +402,7 @@ export function ActionSelection({
                           className="w-full h-full min-h-[80px] p-4 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-black/20 rounded-sm text-secondary hover:border-black/40 hover:text-black transition-all cursor-pointer"
                         >
                           <span className="text-xl">+</span>
-                          <span className="text-xs">직접 추가</span>
+                          <span className="text-xs">{t('actionSelection.addCustom')}</span>
                         </button>
                       )}
                     </motion.div>
@@ -406,7 +417,19 @@ export function ActionSelection({
                 transition={{ delay: 0.2 }}
                 className="flex flex-col items-center gap-4"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  {/* Reset button */}
+                  {onReset && (
+                    <motion.button
+                      onClick={onReset}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-5 py-2.5 border border-black/10 text-sm text-secondary hover:text-black hover:border-black/30 transition-all"
+                    >
+                      {t('actionSelection.reset')}
+                    </motion.button>
+                  )}
+
                   {/* Regenerate button */}
                   <motion.button
                     onClick={handleRegenerate}
@@ -422,10 +445,10 @@ export function ActionSelection({
                           transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                           className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full"
                         />
-                        재생성 중...
+                        {language === 'ko' ? '재생성 중...' : 'Regenerating...'}
                       </span>
                     ) : (
-                      '다른 옵션 제안받기'
+                      t('actionSelection.regenerate')
                     )}
                   </motion.button>
 
@@ -443,13 +466,13 @@ export function ActionSelection({
                       }
                     `}
                   >
-                    {isLastPillar ? '만다라트 완성하기' : '다음 영역으로'}
+                    {isLastPillar ? t('actionSelection.complete') : t('actionSelection.next')}
                   </motion.button>
                 </div>
 
                 {!canProceed && selectedCount > 0 && (
                   <p className="text-sm text-secondary">
-                    {8 - selectedCount}개 더 선택해주세요
+                    {t('actionSelection.needMore', { n: 8 - selectedCount })}
                   </p>
                 )}
               </motion.div>
@@ -465,7 +488,7 @@ export function ActionSelection({
           animate={{ opacity: 1 }}
           className="mt-12 pt-8 border-t border-black/10"
         >
-          <p className="text-sm text-secondary mb-4 text-center">완성된 영역</p>
+          <p className="text-sm text-secondary mb-4 text-center">{language === 'ko' ? '완성된 영역' : 'Completed Areas'}</p>
           <div className="flex justify-center gap-2 flex-wrap">
             {completedSubGrids.map((grid) => (
               <span

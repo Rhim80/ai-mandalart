@@ -9,11 +9,12 @@ interface ActionRegenerationResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const { goal, vibeSummary, pillar, selectedActions, count } = await req.json() as {
+    const { goal, vibeSummary, pillar, selectedActions, rejectedActions, count } = await req.json() as {
       goal: string;
       vibeSummary: string;
       pillar: Pillar;
       selectedActions: string[];
+      rejectedActions: string[];
       count: number;
     };
 
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = ACTION_REGENERATION(goal, vibeSummary, pillar, selectedActions, count);
+    const prompt = ACTION_REGENERATION(goal, vibeSummary, pillar, selectedActions, rejectedActions || [], count);
     const result = await callOpenAI<ActionRegenerationResponse>(prompt);
 
     return NextResponse.json(result);

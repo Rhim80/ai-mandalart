@@ -3,15 +3,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArchetypeType, InterviewAnswer, QuickContext } from '@/types/mandalart';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface InterviewStepProps {
   archetype: ArchetypeType;
   goal: string;
   quickContext?: QuickContext | null;
   onComplete: (answers: InterviewAnswer[], vibeSummary: string) => void;
+  onReset?: () => void;
 }
 
-export function InterviewStep({ archetype, goal, quickContext, onComplete }: InterviewStepProps) {
+export function InterviewStep({ archetype, goal, quickContext, onComplete, onReset }: InterviewStepProps) {
+  const { t, language } = useLanguage();
   const [questions, setQuestions] = useState<string[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState('');
@@ -106,9 +109,9 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete }: Int
           animate={{ opacity: 1 }}
           className="text-sm tracking-[0.3em] text-secondary uppercase mb-4"
         >
-          Step 2
+          {t('interview.step')}
         </motion.p>
-        <h2 className="text-4xl font-extralight mb-6 tracking-tight">심층 인터뷰</h2>
+        <h2 className="text-4xl font-extralight mb-6 tracking-tight">{t('interview.title')}</h2>
 
         {/* Progress indicator */}
         <div className="flex items-center justify-center gap-3">
@@ -132,6 +135,7 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete }: Int
             </motion.div>
           ))}
         </div>
+
       </div>
 
       <AnimatePresence mode="wait">
@@ -150,8 +154,8 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete }: Int
             />
             <p className="text-secondary">
               {isGeneratingSummary
-                ? '당신의 이야기를 정리하고 있습니다...'
-                : '맞춤형 질문을 준비하고 있습니다...'}
+                ? (language === 'ko' ? '당신의 이야기를 정리하고 있습니다...' : 'Summarizing your story...')
+                : (language === 'ko' ? '맞춤형 질문을 준비하고 있습니다...' : 'Preparing personalized questions...')}
             </p>
           </motion.div>
         ) : (
@@ -185,12 +189,22 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete }: Int
               <textarea
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="마음 가는 대로 적어주세요"
+                placeholder={t('interview.placeholder')}
                 rows={4}
                 className="w-full px-0 py-4 text-lg bg-transparent border-b-2 border-black/10 focus:border-black outline-none transition-colors resize-none placeholder:text-black/25"
               />
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                {onReset && (
+                  <motion.button
+                    onClick={onReset}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-6 py-3 border border-black/10 text-secondary hover:text-black hover:border-black/30 transition-all"
+                  >
+                    {language === 'ko' ? '처음으로' : 'Start Over'}
+                  </motion.button>
+                )}
                 <motion.button
                   onClick={handleSubmitAnswer}
                   disabled={!answer.trim()}
@@ -198,7 +212,7 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete }: Int
                   whileTap={{ scale: answer.trim() ? 0.98 : 1 }}
                   className="btn-primary"
                 >
-                  {questionIndex < 2 ? '다음 질문' : '완료'}
+                  {questionIndex < 2 ? t('interview.next') : (language === 'ko' ? '완료' : 'Complete')}
                 </motion.button>
               </div>
             </motion.div>
@@ -215,7 +229,7 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete }: Int
           className="mt-16 pt-8 border-t border-black/5"
         >
           <p className="text-xs tracking-[0.2em] text-secondary uppercase mb-4 text-center">
-            이전 답변
+            {t('interview.previous')}
           </p>
           <div className="space-y-4">
             {answers.map((a, i) => (

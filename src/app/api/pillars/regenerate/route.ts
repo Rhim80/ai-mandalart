@@ -5,11 +5,12 @@ import { ArchetypeType, Pillar, PillarsResponse } from '@/types/mandalart';
 
 export async function POST(req: NextRequest) {
   try {
-    const { archetype, goal, vibeSummary, selectedPillars, count } = await req.json() as {
+    const { archetype, goal, vibeSummary, selectedPillars, rejectedPillars, count } = await req.json() as {
       archetype: ArchetypeType;
       goal: string;
       vibeSummary: string;
       selectedPillars: Pillar[];
+      rejectedPillars: Pillar[];
       count: number;
     };
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = PILLAR_REGENERATION(archetype, goal, vibeSummary, selectedPillars, count);
+    const prompt = PILLAR_REGENERATION(archetype, goal, vibeSummary, selectedPillars, rejectedPillars || [], count);
     const result = await callOpenAI<PillarsResponse>(prompt);
 
     return NextResponse.json(result);

@@ -467,13 +467,295 @@ useEffect(() => {
 
 ---
 
+---
+
+## 2025-12-28 업데이트: Phase 6 - UX 개선 및 다국어 지원
+
+### 1. 다국어 지원 시스템 (한국어/영어)
+
+#### 핵심 아이디어
+```
+한국어 전용 → 글로벌 사용자 대응
+하드코딩 텍스트 → 중앙화된 번역 관리
+```
+
+#### 구현 아키텍처
+
+**LanguageContext 생성**
+```typescript
+// contexts/LanguageContext.tsx
+type Language = 'ko' | 'en';
+
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string) => string;           // 단일 문자열 번역
+  options: (key: string) => string[];   // 배열 옵션 번역
+}
+```
+
+**translations.ts 구조**
+```typescript
+const translations = {
+  ko: {
+    quickContext: {
+      title: '만다라트',
+      subtitle: '당신에 대해 알려주세요',
+      // ...
+    },
+    options: {
+      lifeAreas: ['커리어', '건강', '관계', '재정', '자기계발', '취미'],
+      // ...
+    },
+  },
+  en: {
+    quickContext: {
+      title: 'Mandalart',
+      subtitle: 'Tell us about yourself',
+      // ...
+    },
+    options: {
+      lifeAreas: ['Career', 'Health', 'Relationships', 'Finance', 'Self-Development', 'Hobbies'],
+      // ...
+    },
+  },
+};
+```
+
+**인덱스 기반 상태 관리 (핵심 패턴)**
+```typescript
+// 문제: 언어 전환 시 선택한 값이 깨짐
+// 해결: 표시값이 아닌 인덱스를 저장
+
+const [lifeAreaIndex, setLifeAreaIndex] = useState<number>(-1);
+
+// 표시용: 현재 언어로 변환
+const selectedLifeArea = lifeAreaIndex >= 0 ? lifeAreasOptions[lifeAreaIndex] : '';
+
+// API 전송용: 항상 한국어로 변환 (백엔드 호환성)
+const koOptions = { lifeAreas: ['커리어', '건강', ...] };
+onComplete({ lifeAreas: [koOptions.lifeAreas[lifeAreaIndex]] });
+```
+
+#### 적용된 컴포넌트
+- QuickContext, GoalInput, DiscoveryMode
+- ArchetypeResult, InterviewStep
+- PillarSelection, ActionSelection
+- MandalartGrid, DonationLink
+
+---
+
+### 2. 오타니 만다라트 이미지 개선
+
+#### 문제
+- 데스크탑에서 이미지가 너무 작음
+- 원본 이미지의 연두색이 모노크롬 디자인과 부조화
+
+#### 해결
+
+**이미지 크기 확대**
+```tsx
+// Before
+<div className="w-[240px] h-[240px] sm:w-[280px] sm:h-[280px]">
+
+// After
+<div className="w-[320px] h-[320px] sm:w-[400px] sm:h-[400px]">
+```
+
+**그레이스케일 필터 적용**
+```tsx
+<Image
+  src="/ohtani-mandalart.jpg"
+  className="object-cover w-full h-full grayscale contrast-[1.05]"
+/>
+```
+
+**캡션 추가**
+```tsx
+<p className="mt-3 text-xs text-black/40">
+  {language === 'ko'
+    ? '오타니 쇼헤이, 고등학교 1학년 (2010)'
+    : 'Shohei Ohtani, High School Freshman (2010)'}
+</p>
+```
+
+---
+
+### 3. 집중 영역 단일 선택으로 변경
+
+#### 문제
+복수 선택 시 선택한 영역과 무관한 인터뷰 질문 생성
+- 예: "건강" + "커리어" 선택 → 체중감량 목표 → 커리어 관련 질문 등장
+
+#### 해결
+```typescript
+// Before: 복수 선택
+const [lifeAreaIndices, setLifeAreaIndices] = useState<number[]>([]);
+
+// After: 단일 선택
+const [lifeAreaIndex, setLifeAreaIndex] = useState<number>(-1);
+```
+
+---
+
+### 4. 후원 링크 변경 (Toss → 카카오페이)
+
+#### 배경
+토스 아이디 서비스 종료
+
+#### 변경
+```typescript
+const DONATION_URLS = {
+  ko: 'https://qr.kakaopay.com/FPDgOu0JD',  // 카카오페이 QR
+  en: 'https://buymeacoffee.com/imiwork',   // Buy Me a Coffee
+};
+```
+
+---
+
+### 5. Discovery Mode 전면 개편
+
+#### 문제
+기존 AI 기반 주관식 질문이 너무 어렵고 막연함
+> "어떤 목표를 세우고 싶으세요?" → 사용자 막막함
+
+#### 해결 방향 검토
+
+**Option A (기각)**: 템플릿에 수치 입력
+```
+건강 → 체중 감량 → "{target}kg" 입력 → "체중 10kg 감량"
+```
+- 문제: 너무 구체적이어서 AI pillar 생성이 제한적
+
+**Option B (채택)**: 넓은 범위의 목표
+```
+건강 → 체중 감량 → "건강한 체중 관리와 감량" (바로 완료)
+```
+- 장점: AI에게 창의적 여지 제공, 사용자 부담 감소
+
+#### 최종 구현
+
+**3단계 → 2단계 간소화**
+```
+Before: 영역 → 세부 목표 → 수치 입력
+After:  영역 → 세부 목표 (바로 완료)
+```
+
+**DISCOVERY_OPTIONS 구조**
+```typescript
+const DISCOVERY_OPTIONS = {
+  ko: {
+    areas: [
+      {
+        id: 'health',
+        label: '건강',
+        subGoals: [
+          { id: 'weight_loss', label: '체중 감량', goal: '건강한 체중 관리와 감량' },
+          { id: 'exercise_habit', label: '운동 습관', goal: '규칙적인 운동 습관 만들기' },
+          // ...
+        ],
+      },
+      // career, finance, relationship, selfdev, hobby
+    ],
+  },
+  en: { /* English translations */ },
+};
+```
+
+**6개 영역 × 세부 목표**
+
+| 영역 | 세부 목표 |
+|------|----------|
+| 건강 | 체중 감량, 체중 증가/근육, 운동 습관, 금연, 금주/절주, 수면 개선, 정신건강 |
+| 커리어 | 승진/성과, 이직/전직, 역량 강화, 자격증 취득, 사이드 프로젝트, 프리랜서 전환 |
+| 재정 | 저축, 빚 상환, 투자 시작, 수입 증가, 지출 줄이기 |
+| 관계 | 가족 관계, 친구 관계, 연애/결혼, 네트워킹, 소통 능력 |
+| 자기계발 | 독서, 외국어, 새로운 기술, 온라인 강의, 글쓰기/블로그 |
+| 취미/여가 | 여행, 창작 활동, 스포츠/레저, 음악, 휴식/힐링 |
+
+---
+
+### 파일 변경 요약
+
+| 파일 | 작업 |
+|------|------|
+| `contexts/LanguageContext.tsx` | **신규** - 언어 컨텍스트 |
+| `components/LanguageToggle.tsx` | **신규** - 언어 전환 버튼 |
+| `lib/translations.ts` | **신규** - 전체 UI 번역 |
+| `components/ClientLayout.tsx` | **신규** - Provider 래핑 |
+| `components/QuickContext.tsx` | 다국어, 단일선택, 이미지 개선 |
+| `components/DiscoveryMode.tsx` | 2단계 객관식으로 전면 개편 |
+| `components/DonationLink.tsx` | 카카오페이 URL 변경 |
+| 기타 모든 컴포넌트 | `useLanguage()` 훅 적용 |
+
+---
+
+### 새로운 프로젝트 구조
+
+```
+ai-mandalart/
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── globals.css
+│   │   └── api/
+│   │       ├── archetype/route.ts
+│   │       ├── interview/route.ts
+│   │       ├── discovery/route.ts
+│   │       ├── pillars/
+│   │       │   ├── route.ts
+│   │       │   └── regenerate/route.ts
+│   │       └── actions/
+│   │           ├── route.ts
+│   │           ├── suggest/route.ts
+│   │           └── regenerate/route.ts
+│   ├── components/
+│   │   ├── ClientLayout.tsx          # NEW - Provider 래핑
+│   │   ├── LanguageToggle.tsx        # NEW - 언어 전환
+│   │   ├── DonationLink.tsx          # NEW - 후원 링크
+│   │   ├── MandalartBuilder.tsx
+│   │   ├── QuickContext.tsx          # 다국어 + 단일선택
+│   │   ├── GoalInput.tsx
+│   │   ├── DiscoveryMode.tsx         # 2단계 객관식
+│   │   ├── ArchetypeResult.tsx
+│   │   ├── InterviewStep.tsx
+│   │   ├── PillarSelection.tsx
+│   │   ├── ActionSelection.tsx
+│   │   ├── MandalartGrid.tsx
+│   │   ├── SubGrid.tsx
+│   │   └── GridCell.tsx
+│   ├── contexts/
+│   │   └── LanguageContext.tsx       # NEW - 언어 상태 관리
+│   ├── types/
+│   │   └── mandalart.ts
+│   ├── lib/
+│   │   ├── openai.ts
+│   │   ├── prompts.ts
+│   │   └── translations.ts           # NEW - 번역 데이터
+│   └── hooks/
+│       └── useMandalartSession.ts
+├── public/
+│   └── ohtani-mandalart.jpg          # 오타니 만다라트 이미지
+├── .env.local
+├── tailwind.config.ts
+└── package.json
+```
+
+---
+
 ## 향후 개선 계획
 
 - [x] Quick Context 시스템 (2025-12-27)
 - [x] 동적 인터뷰 질문 생성 (2025-12-27)
+- [x] 다국어 지원 - 한국어/영어 (2025-12-28)
+- [x] Discovery Mode 개편 - 객관식 2단계 (2025-12-28)
+- [x] 오타니 이미지 디자인 개선 (2025-12-28)
+- [x] 집중 영역 단일 선택 (2025-12-28)
+- [x] 후원 링크 카카오페이 변경 (2025-12-28)
 - [ ] 결과 URL 공유 (query param 인코딩)
 - [ ] PDF 내보내기
-- [ ] 다국어 지원 (EN)
+- [ ] 일본어 지원
 - [ ] 진행 상황 저장/불러오기 개선
 - [ ] 모바일 반응형 최적화
 

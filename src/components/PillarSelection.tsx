@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pillar } from '@/types/mandalart';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Accent red color
 const ACCENT_RED = '#E53935';
@@ -14,6 +15,7 @@ interface PillarSelectionProps {
   onRegenerate: (selectedPillars: Pillar[], count: number) => Promise<Pillar[]>;
   onComplete: () => void;
   isLoading: boolean;
+  onReset?: () => void;
 }
 
 export function PillarSelection({
@@ -23,7 +25,9 @@ export function PillarSelection({
   onRegenerate,
   onComplete,
   isLoading,
+  onReset,
 }: PillarSelectionProps) {
+  const { t, language } = useLanguage();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [localPillars, setLocalPillars] = useState<Pillar[]>(pillars);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -46,10 +50,17 @@ export function PillarSelection({
     try {
       const newPillars = await onRegenerate(selectedPillars, unselectedCount);
 
+      // Generate unique IDs with timestamp to prevent duplicates
+      const timestamp = Date.now();
+      const pillarsWithUniqueIds = newPillars.map((p, idx) => ({
+        ...p,
+        id: `regen_${timestamp}_${idx}`,
+      }));
+
       // Keep selected pillars, replace unselected ones
       const updatedPillars = [
         ...localPillars.filter((p) => selectedPillars.some((sp) => sp.id === p.id)),
-        ...newPillars,
+        ...pillarsWithUniqueIds,
       ];
       setLocalPillars(updatedPillars);
     } catch (error) {
@@ -96,13 +107,13 @@ export function PillarSelection({
           className="text-sm tracking-[0.3em] uppercase mb-4"
           style={{ color: ACCENT_RED }}
         >
-          Step 3
+          {t('pillarSelection.step')}
         </motion.p>
         <h2 className="text-4xl font-extralight mb-4 tracking-tight">
-          전략 영역 선택
+          {t('pillarSelection.title')}
         </h2>
         <p className="text-secondary text-lg">
-          목표 달성을 위한 8가지 핵심 영역을 선택하세요
+          {t('pillarSelection.subtitle')}
         </p>
 
         {/* Progress indicator - monochrome */}
@@ -121,6 +132,7 @@ export function PillarSelection({
           ))}
           <span className="ml-3 text-sm text-secondary">{selectedCount}/8</span>
         </div>
+
       </div>
 
       {/* Pillars Grid */}
@@ -193,7 +205,7 @@ export function PillarSelection({
                     type="text"
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
-                    placeholder="영역 이름"
+                    placeholder={t('pillarSelection.customPlaceholder')}
                     className="w-full mb-2 px-2 py-1.5 text-sm border border-black/10 rounded focus:outline-none focus:border-black/30"
                     autoFocus
                   />
@@ -201,7 +213,7 @@ export function PillarSelection({
                     type="text"
                     value={customDescription}
                     onChange={(e) => setCustomDescription(e.target.value)}
-                    placeholder="설명 (선택)"
+                    placeholder={language === 'ko' ? '설명 (선택)' : 'Description (optional)'}
                     className="w-full mb-3 px-2 py-1.5 text-sm border border-black/10 rounded focus:outline-none focus:border-black/30"
                   />
                   <div className="flex gap-2">
@@ -210,7 +222,7 @@ export function PillarSelection({
                       disabled={!customTitle.trim()}
                       className="flex-1 py-1.5 text-sm bg-black text-white disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      추가
+                      {language === 'ko' ? '추가' : 'Add'}
                     </button>
                     <button
                       onClick={() => {
@@ -220,7 +232,7 @@ export function PillarSelection({
                       }}
                       className="flex-1 py-1.5 text-sm border border-black/20 text-secondary hover:text-black"
                     >
-                      취소
+                      {language === 'ko' ? '취소' : 'Cancel'}
                     </button>
                   </div>
                 </div>
@@ -230,7 +242,7 @@ export function PillarSelection({
                   className="w-full h-full min-h-[120px] p-5 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/20 rounded-sm text-secondary hover:border-black/40 hover:text-black transition-all cursor-pointer"
                 >
                   <span className="text-2xl">+</span>
-                  <span className="text-sm">직접 추가하기</span>
+                  <span className="text-sm">{t('pillarSelection.addCustom')}</span>
                 </button>
               )}
             </motion.div>
@@ -245,7 +257,19 @@ export function PillarSelection({
         transition={{ delay: 0.3 }}
         className="flex flex-col items-center gap-4"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Reset button */}
+          {onReset && (
+            <motion.button
+              onClick={onReset}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-6 py-3 border border-black/10 text-secondary hover:text-black hover:border-black/30 transition-all"
+            >
+              {t('pillarSelection.reset')}
+            </motion.button>
+          )}
+
           {/* Regenerate button */}
           <motion.button
             onClick={handleRegenerate}
@@ -261,10 +285,10 @@ export function PillarSelection({
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                   className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full"
                 />
-                다른 옵션 가져오는 중...
+                {language === 'ko' ? '다른 옵션 가져오는 중...' : 'Fetching options...'}
               </span>
             ) : (
-              `선택 안한 ${unselectedCount}개 다시 제안받기`
+              t('pillarSelection.regenerate', { n: unselectedCount })
             )}
           </motion.button>
 
@@ -282,13 +306,13 @@ export function PillarSelection({
               }
             `}
           >
-            {isLoading ? '다음 단계로...' : '다음 단계'}
+            {isLoading ? (language === 'ko' ? '다음 단계로...' : 'Loading...') : t('pillarSelection.next')}
           </motion.button>
         </div>
 
         {!canComplete && selectedCount > 0 && (
           <p className="text-sm text-secondary">
-            {8 - selectedCount}개 더 선택해주세요
+            {t('pillarSelection.needMore', { n: 8 - selectedCount })}
           </p>
         )}
       </motion.div>
