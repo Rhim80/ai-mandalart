@@ -22,8 +22,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error('Archetype API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to detect archetype' },
+      { error: 'Failed to detect archetype', details: errorMessage },
       { status: 500 }
     );
   }
