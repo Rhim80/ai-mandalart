@@ -18,15 +18,22 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #1d1d1f;
-  --foreground-secondary: #86868b;
-  --foreground-tertiary: #aeaeb2;
+  /* Warm color system - 결과 페이지와 통일 */
+  --background: #F5EEEB;
+  --background-card: #ffffff;
+  --foreground: #5d5654;
+  --foreground-secondary: #888888;
+  --foreground-tertiary: #aaaaaa;
 
-  /* Accent color - Red */
-  --accent-red: #E53935;
-  --accent-red-light: rgba(229, 57, 53, 0.08);
-  --accent-red-hover: rgba(229, 57, 53, 0.12);
+  /* Accent color - Coral (결과 페이지 닉네임 색상과 통일) */
+  --accent-coral: #d68c7b;
+  --accent-coral-light: rgba(214, 140, 123, 0.12);
+  --accent-coral-hover: rgba(214, 140, 123, 0.18);
+
+  /* Legacy red (하위 호환) */
+  --accent-red: #d68c7b;
+  --accent-red-light: rgba(214, 140, 123, 0.12);
+  --accent-red-hover: rgba(214, 140, 123, 0.18);
 
   /* Monochrome system */
   --mono-subtle: rgba(0, 0, 0, 0.02);
@@ -61,8 +68,8 @@
 /* Force light mode - no dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #ffffff;
-    --foreground: #1d1d1f;
+    --background: #F5EEEB;
+    --foreground: #5d5654;
   }
 }
 
@@ -133,10 +140,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Button base */
 .btn-primary {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--accent-coral);
+  color: white;
   font-weight: 500;
   padding: 14px 28px;
+  border-radius: 12px;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm);
 }
@@ -144,6 +152,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover {
   box-shadow: var(--shadow-md);
   transform: scale(1.02);
+  filter: brightness(1.05);
 }
 
 .btn-primary:active {
@@ -151,28 +160,30 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
 .btn-secondary {
-  background: transparent;
+  background: var(--background-card);
   color: var(--foreground-secondary);
   font-weight: 500;
   padding: 14px 28px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   transition: all var(--transition-fast);
 }
 
 .btn-secondary:hover {
   color: var(--foreground);
-  border-color: rgba(0, 0, 0, 0.4);
+  border-color: rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -186,6 +197,7 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 2px solid rgba(0, 0, 0, 0.1);
   outline: none;
   transition: border-color var(--transition-base);
+  color: var(--foreground);
 }
 
 .input-underline::placeholder {
@@ -193,7 +205,38 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .input-underline:focus {
-  border-bottom-color: var(--foreground);
+  border-bottom-color: var(--accent-coral);
+}
+
+/* Card input style */
+.input-card {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 1.125rem;
+  background: var(--background-card);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  outline: none;
+  transition: all var(--transition-base);
+  color: var(--foreground);
+}
+
+.input-card::placeholder {
+  color: var(--foreground-tertiary);
+}
+
+.input-card:focus {
+  border-color: var(--accent-coral);
+  box-shadow: 0 0 0 3px var(--accent-coral-light);
+}
+
+/* Form card container */
+.form-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 /* Loading spinner */

@@ -6,8 +6,10 @@ import Image from 'next/image';
 import { QuickContext as QuickContextType } from '@/types/mandalart';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-// Accent red color
-const ACCENT_RED = '#E53935';
+// Accent color - Coral (결과 페이지와 통일)
+const ACCENT_CORAL = '#d68c7b';
+const TEXT_PRIMARY = '#5d5654';
+const TEXT_SECONDARY = '#888888';
 
 interface QuickContextProps {
   onComplete: (context: QuickContextType) => void;
@@ -51,7 +53,7 @@ function ChipGroup({ label, options, selected, onSelect, multiSelect = false, mu
               }
             `}
             style={{
-              borderColor: isSelected(option) ? ACCENT_RED : undefined,
+              borderColor: isSelected(option) ? ACCENT_CORAL : undefined,
             }}
           >
             {option}
@@ -134,12 +136,24 @@ export function QuickContext({ onComplete }: QuickContextProps) {
     >
       {/* Value Proposition Section */}
       <div className="text-center mb-10">
+        {/* Year Badge */}
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="text-sm font-medium tracking-[0.3em] mb-3"
+          style={{ color: ACCENT_CORAL }}
+        >
+          2026 LIFE KEYWORD
+        </motion.p>
+
         {/* Title */}
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-5xl md:text-6xl font-extralight mb-8 tracking-tight"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-5xl md:text-6xl font-light mb-8 tracking-wide"
+          style={{ color: TEXT_PRIMARY }}
         >
           {t('quickContext.title')}
         </motion.h1>
@@ -151,13 +165,13 @@ export function QuickContext({ onComplete }: QuickContextProps) {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-8 flex flex-col items-center"
         >
-          <div className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] rounded-sm overflow-hidden border border-black/10 bg-gray-50">
+          <div className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] rounded-lg overflow-hidden border border-black/10">
             <Image
-              src="/ohtani-mandalart.jpg"
+              src="/ohtani-mandalart-example.png"
               alt={language === 'ko' ? '오타니 쇼헤이의 고등학교 시절 만다라트 계획표' : "Shohei Ohtani's high school mandalart chart"}
               width={400}
               height={400}
-              className="object-cover w-full h-full grayscale contrast-[1.05]"
+              className="object-cover w-full h-full"
               priority
               unoptimized
             />
@@ -194,7 +208,7 @@ export function QuickContext({ onComplete }: QuickContextProps) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           className="text-lg font-medium"
-          style={{ color: ACCENT_RED }}
+          style={{ color: ACCENT_CORAL }}
         >
           {language === 'ko' ? '당신의 81칸을 채워보세요' : 'Fill your 81 cells'}
         </motion.p>

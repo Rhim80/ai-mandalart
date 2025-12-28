@@ -5,6 +5,10 @@ import { motion } from 'framer-motion';
 import { QuickContext } from '@/types/mandalart';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// Accent color - Coral (결과 페이지와 통일)
+const ACCENT_CORAL = '#d68c7b';
+const TEXT_PRIMARY = '#5d5654';
+
 interface GoalInputProps {
   onSubmit: (goal: string) => void;
   onDiscoveryMode: () => void;
@@ -74,7 +78,18 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1, duration: 0.5 }}
         >
-          <h1 className="text-5xl md:text-6xl font-extralight mb-6 tracking-tight">
+          {/* Year Badge */}
+          <p
+            className="text-sm font-medium tracking-[0.3em] mb-3"
+            style={{ color: ACCENT_CORAL }}
+          >
+            2026 LIFE KEYWORD
+          </p>
+
+          <h1
+            className="text-5xl md:text-6xl font-light mb-6 tracking-wide"
+            style={{ color: TEXT_PRIMARY }}
+          >
             {t('goalInput.title')}
           </h1>
           <p className="text-xl text-secondary font-light leading-relaxed">
@@ -102,7 +117,8 @@ export function GoalInput({ onSubmit, onDiscoveryMode, isLoading, quickContext }
 
           {/* Subtle focus indicator */}
           <motion.div
-            className="absolute bottom-0 left-1/2 h-0.5 bg-black"
+            className="absolute bottom-0 left-1/2 h-0.5"
+            style={{ backgroundColor: '#d68c7b' }}
             initial={{ width: 0, x: '-50%' }}
             animate={{
               width: goal.length > 0 ? '100%' : 0,
