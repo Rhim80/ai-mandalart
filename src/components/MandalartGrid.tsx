@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toPng } from 'html-to-image';
 import { MandalartData } from '@/types/mandalart';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DonationLink } from './DonationLink';
+import { ExportContainer, ExportRatio } from './export';
 
 // 레퍼런스 이미지 스타일 - 핑크/베이지 톤으로 통일 (미묘한 차이만)
 const SUBGRID_COLORS = [
@@ -52,12 +54,11 @@ interface MandalartGridProps {
   onReset: () => void;
 }
 
-// 내보내기 비율 옵션
-type ExportRatio = 'story' | 'square' | 'desktop';
-const EXPORT_RATIOS: Record<ExportRatio, { width: number; height: number; label: string }> = {
-  story: { width: 1080, height: 1920, label: '인스타 스토리 (9:16)' },
-  square: { width: 1080, height: 1080, label: '정사각형 (1:1)' },
-  desktop: { width: 1920, height: 1080, label: '데스크탑 (16:9)' },
+// 내보내기 비율 옵션 (ExportRatio는 ./export에서 import)
+const EXPORT_RATIOS: Record<ExportRatio, { width: number; height: number; label: string; containerRatio: ExportRatio }> = {
+  story: { width: 1080, height: 1920, label: '인스타 스토리 (9:16)', containerRatio: 'story' },
+  square: { width: 1080, height: 1080, label: '정사각형 (1:1)', containerRatio: 'square' },
+  wide: { width: 1920, height: 1080, label: '데스크탑 (16:9)', containerRatio: 'wide' },
 };
 
 export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: MandalartGridProps) {
@@ -66,195 +67,61 @@ export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: Ma
   const [isExportingCarousel, setIsExportingCarousel] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [currentExportRatio, setCurrentExportRatio] = useState<ExportRatio>('story');
+  const exportRef = useRef<HTMLDivElement>(null);
 
-  // 비율별 이미지 내보내기
+  // 비율별 이미지 내보내기 (html-to-image 방식)
   const handleExportWithRatio = useCallback(async (ratio: ExportRatio) => {
     setIsExporting(true);
     setShowExportOptions(false);
+    setCurrentExportRatio(ratio);
 
-    const { width, height } = EXPORT_RATIOS[ratio];
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
+    // React 상태 업데이트 대기
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    if (!exportRef.current) {
       setIsExporting(false);
       return;
     }
 
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filePrefix = nickname || 'mandalart';
+    const { width, height } = EXPORT_RATIOS[ratio];
 
-    // 배경
-    ctx.fillStyle = BG_COLOR;
-    ctx.fillRect(0, 0, width, height);
+    try {
+      // 캡처 전 요소를 보이게 함
+      const el = exportRef.current;
+      const originalStyle = el.style.cssText;
+      el.style.cssText = `position: fixed; left: 0; top: 0; width: ${width}px; height: ${height}px; z-index: 9999;`;
 
-    // 비율에 따른 그리드 크기 계산
-    const isVertical = height > width;
-    const isSquare = width === height;
+      // DOM 업데이트 대기
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-    let gridTotalSize: number;
-    let cellSize: number;
-    let gap: number;
-    let startX: number;
-    let startY: number;
-    let headerY: number;
-    let footerY: number;
-    let fontSize: { title: number; pillar: number; action: number; header: number };
-
-    if (isVertical) {
-      // 세로형 (9:16)
-      gridTotalSize = width * 0.9;
-      gap = 6;
-      cellSize = (gridTotalSize - gap * 2) / 3;
-      startX = (width - gridTotalSize) / 2;
-      startY = height * 0.2;
-      headerY = height * 0.08;
-      footerY = height - 60;
-      fontSize = { title: 32, pillar: 24, action: 20, header: 40 };
-    } else if (isSquare) {
-      // 정사각형 (1:1)
-      gridTotalSize = width * 0.85;
-      gap = 6;
-      cellSize = (gridTotalSize - gap * 2) / 3;
-      startX = (width - gridTotalSize) / 2;
-      startY = height * 0.18;
-      headerY = height * 0.06;
-      footerY = height - 50;
-      fontSize = { title: 28, pillar: 22, action: 18, header: 36 };
-    } else {
-      // 가로형 (16:9)
-      gridTotalSize = height * 0.75;
-      gap = 6;
-      cellSize = (gridTotalSize - gap * 2) / 3;
-      startX = (width - gridTotalSize) / 2;
-      startY = height * 0.15;
-      headerY = height * 0.06;
-      footerY = height - 40;
-      fontSize = { title: 26, pillar: 20, action: 16, header: 32 };
-    }
-
-    // 헤더
-    ctx.fillStyle = '#4a4a4a';
-    ctx.font = `bold ${fontSize.header}px -apple-system, BlinkMacSystemFont, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(language === 'ko' ? '2026' : '2026', width / 2, headerY);
-
-    ctx.font = `${fontSize.header * 0.4}px -apple-system, BlinkMacSystemFont, sans-serif`;
-    ctx.fillStyle = '#888888';
-    ctx.fillText('LIFE KEYWORD', width / 2, headerY + fontSize.header * 0.5);
-
-    if (nickname) {
-      ctx.font = `${fontSize.header * 0.5}px -apple-system, BlinkMacSystemFont, sans-serif`;
-      ctx.fillStyle = '#CC785C';
-      ctx.fillText(nickname, width / 2, headerY + fontSize.header * 1);
-    }
-
-    // 셀 그리기 함수
-    const drawCell = (
-      x: number, y: number, w: number, h: number,
-      text: string, bgColor: string, textColor: string,
-      textSize: number, isBold: boolean = false
-    ) => {
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(x, y, w, h);
-
-      ctx.fillStyle = textColor;
-      ctx.font = `${isBold ? 'bold ' : ''}${textSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // 텍스트 줄바꿈
-      const maxWidth = w - 10;
-      const chars = text.split('');
-      let lines: string[] = [];
-      let currentLine = '';
-
-      for (const char of chars) {
-        const testLine = currentLine + char;
-        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-          lines.push(currentLine);
-          currentLine = char;
-        } else {
-          currentLine = testLine;
-        }
-      }
-      if (currentLine) lines.push(currentLine);
-      if (lines.length > 3) {
-        lines = lines.slice(0, 3);
-        lines[2] = lines[2].slice(0, -1) + '…';
-      }
-
-      const lineHeight = textSize * 1.2;
-      const totalH = lines.length * lineHeight;
-      const textStartY = y + h / 2 - totalH / 2 + lineHeight / 2;
-      lines.forEach((line, i) => {
-        ctx.fillText(line, x + w / 2, textStartY + i * lineHeight);
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2, // 고해상도
+        backgroundColor: '#f6f3f0',
+        width,
+        height,
       });
-    };
 
-    // 3x3 서브그리드 그리기
-    const drawSubGrid = (gridX: number, gridY: number, subGridIndex: number, isCore: boolean) => {
-      const subGrid = isCore ? null : data.subGrids[subGridIndex];
-      const subCellSize = (cellSize - 4) / 3;
-      const subGap = 2;
+      // 원래 스타일로 복원
+      el.style.cssText = originalStyle;
 
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-          const cellIndex = row * 3 + col;
-          const x = gridX + col * (subCellSize + subGap);
-          const y = gridY + row * (subCellSize + subGap);
-          const isCenter = cellIndex === 4;
-
-          if (isCore) {
-            if (isCenter) {
-              drawCell(x, y, subCellSize, subCellSize, data.core, '#ffffff', '#1d1d1f', fontSize.title * 0.5, true);
-            } else {
-              const pillarIndex = cellIndex < 4 ? cellIndex : cellIndex - 1;
-              const pillar = data.subGrids[pillarIndex];
-              if (pillar) {
-                drawCell(x, y, subCellSize, subCellSize, pillar.title, SUBGRID_COLORS[pillarIndex], '#4a4a4a', fontSize.pillar * 0.6, true);
-              }
-            }
-          } else if (subGrid) {
-            if (isCenter) {
-              drawCell(x, y, subCellSize, subCellSize, subGrid.title, SUBGRID_COLORS[subGridIndex], '#4a4a4a', fontSize.pillar * 0.6, true);
-            } else {
-              const actionIndex = cellIndex < 4 ? cellIndex : cellIndex - 1;
-              drawCell(x, y, subCellSize, subCellSize, subGrid.actions[actionIndex] || '', '#ffffff', '#666666', fontSize.action * 0.6);
-            }
-          }
-        }
+      const link = document.createElement('a');
+      const displayName = nickname || 'mandalart';
+      const dateStr = new Date().toISOString().split('T')[0];
+      link.download = `${displayName}-mandalart-${ratio}-${dateStr}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export:', err);
+      // 에러 시에도 스타일 복원
+      if (exportRef.current) {
+        const { width: w, height: h } = EXPORT_RATIOS[ratio];
+        exportRef.current.style.cssText = `position: absolute; left: 0; top: 0; width: ${w}px; height: ${h}px; opacity: 0; pointer-events: none; z-index: -1;`;
       }
-    };
-
-    // 9개 서브그리드 배치 (3x3)
-    const positions = [
-      [0, 0, 0], [0, 1, 1], [0, 2, 2],
-      [1, 0, 3], [1, 1, -1], [1, 2, 4],
-      [2, 0, 5], [2, 1, 6], [2, 2, 7],
-    ];
-
-    positions.forEach(([row, col, subGridIndex]) => {
-      const x = startX + col * (cellSize + gap);
-      const y = startY + row * (cellSize + gap);
-      drawSubGrid(x, y, subGridIndex, subGridIndex === -1);
-    });
-
-    // 푸터
-    ctx.fillStyle = '#aaaaaa';
-    ctx.font = `${fontSize.action}px -apple-system, BlinkMacSystemFont, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText('mandalart.imiwork.com', width / 2, footerY);
-
-    // 다운로드
-    const link = document.createElement('a');
-    link.download = `${filePrefix}-mandalart-${ratio}-${dateStr}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    }
 
     setIsExporting(false);
-  }, [data, nickname, language]);
+  }, [nickname]);
 
   const handleSubGridClick = (gridId: string) => {
     if (activeSubGrid === gridId) {
@@ -581,6 +448,23 @@ export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: Ma
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       className="w-full max-w-4xl mx-auto px-4"
     >
+      {/* 내보내기용 숨김 컨테이너 (비율에 따라 동적 변경) */}
+      <div
+        ref={exportRef}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: `${EXPORT_RATIOS[currentExportRatio].width}px`,
+          height: `${EXPORT_RATIOS[currentExportRatio].height}px`,
+          opacity: 0,
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      >
+        <ExportContainer data={data} nickname={nickname} ratio={currentExportRatio} />
+      </div>
+
       {/* Grid Container */}
       <div
         id="mandalart-grid"
