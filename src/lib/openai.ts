@@ -8,7 +8,8 @@ function getOpenAIClient(): OpenAI {
   }
 
   // Cloudflare AI Gateway를 통해 OpenAI API 호출 (403 에러 우회)
-  const baseURL = process.env.CLOUDFLARE_AI_GATEWAY_URL || 'https://api.openai.com/v1';
+  // 환경변수가 Edge Runtime에서 주입 안되는 문제로 하드코딩
+  const baseURL = 'https://gateway.ai.cloudflare.com/v1/2e7841fda8fac46582ba5d43985d17a4/ai-mandalart/openai';
 
   return new OpenAI({ apiKey, baseURL });
 }
