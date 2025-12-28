@@ -6,7 +6,11 @@ function getOpenAIClient(): OpenAI {
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY environment variable is not set');
   }
-  return new OpenAI({ apiKey });
+
+  // Cloudflare AI Gateway를 통해 OpenAI API 호출 (403 에러 우회)
+  const baseURL = process.env.CLOUDFLARE_AI_GATEWAY_URL || 'https://api.openai.com/v1';
+
+  return new OpenAI({ apiKey, baseURL });
 }
 
 export async function callOpenAI<T>(
