@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useSyncExternalStore } from 'react';
 import { Language, translations } from '@/lib/translations';
 
 interface LanguageContextType {
@@ -12,22 +12,31 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('ko');
-  const [isClient, setIsClient] = useState(false);
+// Client-side language detection
+function getStoredLanguage(): Language {
+  if (typeof window === 'undefined') return 'ko';
+  const saved = localStorage.getItem('language') as Language;
+  if (saved && (saved === 'ko' || saved === 'en')) {
+    return saved;
+  }
+  return navigator.language.startsWith('ko') ? 'ko' : 'en';
+}
 
-  // Hydration-safe initialization
-  useEffect(() => {
-    setIsClient(true);
-    const saved = localStorage.getItem('language') as Language;
-    if (saved && (saved === 'ko' || saved === 'en')) {
-      setLanguageState(saved);
-    } else {
-      // Auto-detect browser language
-      const browserLang = navigator.language.startsWith('ko') ? 'ko' : 'en';
-      setLanguageState(browserLang);
-    }
-  }, []);
+// Subscribe to storage changes
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  // Use useSyncExternalStore for hydration-safe client state
+  const storedLanguage = useSyncExternalStore(
+    subscribeToStorage,
+    getStoredLanguage,
+    () => 'ko' as Language // Server snapshot
+  );
+
+  const [language, setLanguageState] = useState<Language>(storedLanguage);
 
   // Save to localStorage
   const setLanguage = (lang: Language) => {
@@ -58,12 +67,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return [];
   };
 
-  // Prevent hydration mismatch by using default language until client-side
-  const effectiveLanguage = isClient ? language : 'ko';
-
   return (
     <LanguageContext.Provider value={{
-      language: effectiveLanguage,
+      language,
       setLanguage,
       t,
       options

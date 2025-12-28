@@ -21,6 +21,25 @@ const SUBGRID_COLORS = [
 // 전체 배경색 (연한 핑크 베이지)
 const BG_COLOR = '#F5EEEB';
 
+// 삼각형 화살표 SVG - 뾰족한 부분이 해당 방향을 향함
+const Arrow = ({ direction }: { direction: 'right' | 'left' | 'up' | 'down' | 'down-right' | 'down-left' | 'up-right' | 'up-left' }) => {
+  const paths: Record<string, string> = {
+    right: 'M0,0 L6,3 L0,6 Z',
+    left: 'M6,0 L0,3 L6,6 Z',
+    down: 'M0,0 L6,0 L3,6 Z',
+    up: 'M0,6 L6,6 L3,0 Z',
+    'up-left': 'M0,0 L6,3 L3,6 Z',
+    'up-right': 'M6,0 L0,3 L3,6 Z',
+    'down-left': 'M0,6 L3,0 L6,3 Z',
+    'down-right': 'M6,6 L0,3 L3,0 Z',
+  };
+  return (
+    <svg width="6" height="6" viewBox="0 0 6 6" className="fill-gray-400">
+      <path d={paths[direction]} />
+    </svg>
+  );
+};
+
 // 스토리 캔버스 크기 (9:16 비율)
 const STORY_WIDTH = 1080;
 const STORY_HEIGHT = 1920;
@@ -272,27 +291,6 @@ export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: Ma
     setIsExportingCarousel(false);
     alert(t('result.carouselComplete'));
   }, [data, nickname, language, t, isExportingCarousel]);
-
-  // 삼각형 화살표 SVG - 뾰족한 부분이 해당 방향을 향함
-  const Arrow = ({ direction }: { direction: 'right' | 'left' | 'up' | 'down' | 'down-right' | 'down-left' | 'up-right' | 'up-left' }) => {
-    // 각 방향별 삼각형: 뾰족한 꼭지점이 해당 방향을 가리킴
-    // 대각선: 밑변이 중앙쪽, 뾰족한 꼭지점이 외부 필러쪽
-    const paths: Record<string, string> = {
-      right: 'M0,0 L6,3 L0,6 Z',        // → 오른쪽 뾰족
-      left: 'M6,0 L0,3 L6,6 Z',         // ← 왼쪽 뾰족
-      down: 'M0,0 L6,0 L3,6 Z',         // ↓ 아래쪽 뾰족
-      up: 'M0,6 L6,6 L3,0 Z',           // ↑ 위쪽 뾰족
-      'up-left': 'M0,0 L6,3 L3,6 Z',    // ↖ 좌상단 뾰족 (꼭지점: 좌상(0,0))
-      'up-right': 'M6,0 L0,3 L3,6 Z',   // ↗ 우상단 뾰족 (꼭지점: 우상(6,0))
-      'down-left': 'M0,6 L3,0 L6,3 Z',  // ↙ 좌하단 뾰족 (꼭지점: 좌하(0,6))
-      'down-right': 'M6,6 L0,3 L3,0 Z', // ↘ 우하단 뾰족 (꼭지점: 우하(6,6))
-    };
-    return (
-      <svg width="6" height="6" viewBox="0 0 6 6" className="fill-gray-400">
-        <path d={paths[direction]} />
-      </svg>
-    );
-  };
 
   // 3x3 서브그리드 렌더링
   const renderSubGrid = (subGridIndex: number, isCore: boolean = false) => {

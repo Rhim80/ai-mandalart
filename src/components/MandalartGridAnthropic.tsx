@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MandalartData } from '@/types/mandalart';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -35,6 +35,25 @@ const SUBGRID_COLORS = [
   '#E4D4CC',  // 블러쉬 코랄
 ];
 
+// 화살표 컴포넌트 (Anthropic primary 컬러)
+const Arrow = ({ direction }: { direction: string }) => {
+  const paths: Record<string, string> = {
+    right: 'M0,0 L6,3 L0,6 Z',
+    left: 'M6,0 L0,3 L6,6 Z',
+    down: 'M0,0 L6,0 L3,6 Z',
+    up: 'M0,6 L6,6 L3,0 Z',
+    'up-left': 'M0,0 L6,3 L3,6 Z',
+    'up-right': 'M6,0 L0,3 L3,6 Z',
+    'down-left': 'M0,6 L3,0 L6,3 Z',
+    'down-right': 'M6,6 L0,3 L3,0 Z',
+  };
+  return (
+    <svg width="6" height="6" viewBox="0 0 6 6">
+      <path d={paths[direction]} fill={ANTHROPIC.primary} opacity={0.6} />
+    </svg>
+  );
+};
+
 interface MandalartGridAnthropicProps {
   data: MandalartData;
   nickname?: string;
@@ -57,25 +76,6 @@ export function MandalartGridAnthropic({ data, nickname, onExport, onShare, onRe
 
   const activeGrid = activeSubGrid ? data.subGrids.find((g) => g.id === activeSubGrid) : null;
   const activeGridIndex = activeGrid ? data.subGrids.findIndex((g) => g.id === activeSubGrid) : -1;
-
-  // 화살표 컴포넌트 (Anthropic primary 컬러)
-  const Arrow = ({ direction }: { direction: string }) => {
-    const paths: Record<string, string> = {
-      right: 'M0,0 L6,3 L0,6 Z',
-      left: 'M6,0 L0,3 L6,6 Z',
-      down: 'M0,0 L6,0 L3,6 Z',
-      up: 'M0,6 L6,6 L3,0 Z',
-      'up-left': 'M0,0 L6,3 L3,6 Z',
-      'up-right': 'M6,0 L0,3 L3,6 Z',
-      'down-left': 'M0,6 L3,0 L6,3 Z',
-      'down-right': 'M6,6 L0,3 L3,0 Z',
-    };
-    return (
-      <svg width="6" height="6" viewBox="0 0 6 6">
-        <path d={paths[direction]} fill={ANTHROPIC.primary} opacity={0.6} />
-      </svg>
-    );
-  };
 
   // 3x3 서브그리드 렌더링 - 텍스트 크기 증가
   const renderSubGrid = (subGridIndex: number, isCore: boolean = false) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useSyncExternalStore } from 'react';
 import {
   MandalartSession,
   INITIAL_SESSION,
@@ -14,22 +14,37 @@ import {
 
 const STORAGE_KEY = 'ai-mandalart-session';
 
+// Get initial session from localStorage
+function getStoredSession(): MandalartSession {
+  if (typeof window === 'undefined') return INITIAL_SESSION;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  return INITIAL_SESSION;
+}
+
+// Subscribe to storage changes
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
+
 export function useMandalartSession() {
-  const [session, setSession] = useState<MandalartSession>(INITIAL_SESSION);
+  // Use useSyncExternalStore for hydration-safe initial state
+  const storedSession = useSyncExternalStore(
+    subscribeToStorage,
+    getStoredSession,
+    () => INITIAL_SESSION // Server snapshot
+  );
+
+  const [session, setSession] = useState<MandalartSession>(storedSession);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setSession(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-  }, []);
 
   // Save to localStorage on change
   useEffect(() => {

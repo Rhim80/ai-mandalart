@@ -4,9 +4,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-// Accent red color
-const ACCENT_RED = '#E53935';
-
 interface DiscoveryModeProps {
   onComplete: (goal: string) => void;
   onBack: () => void;
