@@ -4,9 +4,9 @@ const nextConfig: NextConfig = {
   // Cloudflare Pages 호환 설정
   output: 'standalone',
 
-  // Edge Runtime 최적화
-  experimental: {
-    // Cloudflare에서 필요한 설정
+  // Edge Runtime에서 환경변수 사용을 위한 설정
+  env: {
+    CLOUDFLARE_AI_GATEWAY_URL: process.env.CLOUDFLARE_AI_GATEWAY_URL,
   },
 };
 
