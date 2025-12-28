@@ -753,11 +753,147 @@ ai-mandalart/
 - [x] 오타니 이미지 디자인 개선 (2025-12-28)
 - [x] 집중 영역 단일 선택 (2025-12-28)
 - [x] 후원 링크 카카오페이 변경 (2025-12-28)
+- [x] Cloudflare Pages 배포 + AI Gateway 연동 (2025-12-28)
+- [x] 내보내기 비율 선택 기능 (9:16, 1:1, 16:9) (2025-12-28)
 - [ ] 결과 URL 공유 (query param 인코딩)
 - [ ] PDF 내보내기
 - [ ] 일본어 지원
 - [ ] 진행 상황 저장/불러오기 개선
 - [ ] 모바일 반응형 최적화
+
+---
+
+---
+
+## 2025-12-28 업데이트: Phase 7 - Cloudflare Pages 배포 및 내보내기 개선
+
+### 1. Cloudflare Pages 배포 + AI Gateway 연동
+
+#### 문제 상황
+Cloudflare Pages에 배포 후 OpenAI API 호출 시 403 에러 발생:
+```
+"Country, region, or territory not supported"
+```
+Cloudflare의 Edge 서버가 OpenAI API를 직접 호출할 때 지역 제한에 걸림.
+
+#### 해결: Cloudflare AI Gateway
+
+**Step 1: AI Gateway 생성**
+- Cloudflare Dashboard > AI > AI Gateway > Create Gateway
+- Gateway 이름: `ai-mandalart`
+- 생성된 URL: `https://gateway.ai.cloudflare.com/v1/{account_id}/ai-mandalart/openai`
+
+**Step 2: OpenAI 클라이언트 수정**
+```typescript
+// src/lib/openai.ts
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  // Cloudflare AI Gateway를 통해 OpenAI API 호출 (403 에러 우회)
+  const baseURL = process.env.CLOUDFLARE_AI_GATEWAY_URL || 'https://api.openai.com/v1';
+
+  return new OpenAI({ apiKey, baseURL });
+}
+```
+
+**Step 3: Edge Runtime 환경변수 주입**
+```typescript
+// next.config.ts
+const nextConfig: NextConfig = {
+  output: 'standalone',
+
+  // Edge Runtime에서 환경변수 사용을 위한 설정
+  env: {
+    CLOUDFLARE_AI_GATEWAY_URL: process.env.CLOUDFLARE_AI_GATEWAY_URL,
+  },
+};
+```
+
+> **핵심 포인트**: Next.js Edge Runtime에서는 `process.env`가 빌드 타임에 주입됨.
+> `next.config.ts`의 `env` 설정을 통해 환경변수를 명시적으로 노출해야 함.
+
+**Step 4: Cloudflare Pages 환경변수 설정**
+- Settings > Environment variables
+- `CLOUDFLARE_AI_GATEWAY_URL`: AI Gateway URL
+- `OPENAI_API_KEY`: OpenAI API 키
+
+#### AI Gateway의 장점
+- 지역 제한 우회
+- API 호출 모니터링 및 로깅
+- Rate limiting 설정 가능
+- 캐싱 옵션
+
+---
+
+### 2. 내보내기 비율 선택 기능
+
+#### 문제
+기존: 인스타 스토리(9:16) 비율로만 내보내기 가능
+요청: 데스크탑 사용자를 위한 다양한 비율 지원
+
+#### 해결: 3가지 비율 옵션
+
+**비율 정의**
+```typescript
+type ExportRatio = 'story' | 'square' | 'desktop';
+
+const EXPORT_RATIOS: Record<ExportRatio, { width: number; height: number; label: string }> = {
+  story: { width: 1080, height: 1920, label: '인스타 스토리 (9:16)' },
+  square: { width: 1080, height: 1080, label: '정사각형 (1:1)' },
+  desktop: { width: 1920, height: 1080, label: '데스크탑 (16:9)' },
+};
+```
+
+**Canvas 기반 이미지 생성**
+- 비율별로 그리드 크기, 폰트 크기, 여백 자동 조정
+- 세로형/정사각형/가로형에 맞는 레이아웃 적용
+
+**UI: 드롭다운 선택**
+```tsx
+<motion.button onClick={() => setShowExportOptions(!showExportOptions)}>
+  {t('result.export')}
+</motion.button>
+
+{showExportOptions && (
+  <div className="dropdown">
+    {(Object.keys(EXPORT_RATIOS) as ExportRatio[]).map((ratio) => (
+      <button onClick={() => handleExportWithRatio(ratio)}>
+        {EXPORT_RATIOS[ratio].label}
+      </button>
+    ))}
+  </div>
+)}
+```
+
+---
+
+### 3. URL 통일
+
+모든 푸터 및 내보내기 이미지에서 URL 통일:
+- 변경 전: `claude-code.imiwork.com` (일부 혼재)
+- 변경 후: `mandalart.imiwork.com` (전체 통일)
+
+---
+
+### 파일 변경 요약
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `src/lib/openai.ts` | AI Gateway baseURL 설정 |
+| `next.config.ts` | Edge Runtime 환경변수 주입 |
+| `wrangler.toml` | Cloudflare Pages 설정 |
+| `src/components/MandalartGrid.tsx` | 내보내기 비율 선택 UI, URL 통일 |
+| `src/components/MandalartBuilder.tsx` | USE_ANTHROPIC_STYLE = false (디자인 롤백) |
+
+---
+
+### 배포 정보
+
+| 항목 | 값 |
+|------|-----|
+| 배포 URL | [mandalart.imiwork.com](https://mandalart.imiwork.com) |
+| 플랫폼 | Cloudflare Pages |
+| AI Gateway | Cloudflare AI Gateway (OpenAI 프록시) |
 
 ---
 
