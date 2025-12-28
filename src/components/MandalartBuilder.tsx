@@ -16,7 +16,7 @@ import { MandalartGridAnthropic } from './MandalartGridAnthropic';
 import { InterviewAnswer, ArchetypeResponse, PillarsResponse, Pillar, SubGrid, QuickContext as QuickContextType } from '@/types/mandalart';
 
 // 테스트: Anthropic 스타일 적용 여부 (true로 변경하면 Anthropic 스타일)
-const USE_ANTHROPIC_STYLE = true;
+const USE_ANTHROPIC_STYLE = false;
 
 export function MandalartBuilder() {
   const {

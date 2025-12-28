@@ -77,12 +77,12 @@ export function MandalartGridAnthropic({ data, nickname, onExport, onShare, onRe
   const activeGrid = activeSubGrid ? data.subGrids.find((g) => g.id === activeSubGrid) : null;
   const activeGridIndex = activeGrid ? data.subGrids.findIndex((g) => g.id === activeSubGrid) : -1;
 
-  // 3x3 서브그리드 렌더링 - 텍스트 크기 증가
+  // 3x3 서브그리드 렌더링 - 여백 충분히, 텍스트 작게
   const renderSubGrid = (subGridIndex: number, isCore: boolean = false) => {
     const subGrid = isCore ? null : data.subGrids[subGridIndex];
 
     return (
-      <div className="grid grid-cols-3 gap-[3px]">
+      <div className="grid grid-cols-3 gap-[2px]">
         {Array.from({ length: 9 }).map((_, cellIndex) => {
           const isCenter = cellIndex === 4;
 
@@ -92,14 +92,14 @@ export function MandalartGridAnthropic({ data, nickname, onExport, onShare, onRe
               return (
                 <div
                   key={cellIndex}
-                  className="aspect-square flex items-center justify-center p-1 text-center"
+                  className="aspect-square flex items-center justify-center p-0.5 text-center"
                   style={{
                     backgroundColor: ANTHROPIC.textLight,
                     borderLeft: `3px solid ${ANTHROPIC.primary}`,
                   }}
                 >
                   <span
-                    className="text-[8px] md:text-[11px] font-bold leading-tight line-clamp-3"
+                    className="text-[6px] md:text-[8px] font-bold leading-tight line-clamp-3"
                     style={{ color: ANTHROPIC.text }}
                   >
                     {data.core}
