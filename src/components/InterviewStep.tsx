@@ -37,10 +37,10 @@ export function InterviewStep({ archetype, goal, quickContext, onComplete, onRes
         }),
       });
       const data = await res.json();
+      // Don't reset isGeneratingSummary - keep loading state until component unmounts
       onComplete(finalAnswers, data.vibeSummary);
     } catch (error) {
       console.error('Failed to generate summary:', error);
-    } finally {
       setIsGeneratingSummary(false);
     }
   }, [archetype, goal, onComplete]);

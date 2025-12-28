@@ -12,7 +12,11 @@ import { InterviewStep } from './InterviewStep';
 import { PillarSelection } from './PillarSelection';
 import { ActionSelection } from './ActionSelection';
 import { MandalartGrid } from './MandalartGrid';
+import { MandalartGridAnthropic } from './MandalartGridAnthropic';
 import { InterviewAnswer, ArchetypeResponse, PillarsResponse, Pillar, SubGrid, QuickContext as QuickContextType } from '@/types/mandalart';
+
+// 테스트: Anthropic 스타일 적용 여부 (true로 변경하면 Anthropic 스타일)
+const USE_ANTHROPIC_STYLE = true;
 
 export function MandalartBuilder() {
   const {
@@ -296,14 +300,25 @@ export function MandalartBuilder() {
         )}
 
         {session.currentStep === 'RESULT' && session.mandalart && (
-          <MandalartGrid
-            key="result"
-            data={session.mandalart}
-            nickname={session.quickContext?.nickname}
-            onExport={handleExport}
-            onShare={handleShare}
-            onReset={handleReset}
-          />
+          USE_ANTHROPIC_STYLE ? (
+            <MandalartGridAnthropic
+              key="result-anthropic"
+              data={session.mandalart}
+              nickname={session.quickContext?.nickname}
+              onExport={handleExport}
+              onShare={handleShare}
+              onReset={handleReset}
+            />
+          ) : (
+            <MandalartGrid
+              key="result"
+              data={session.mandalart}
+              nickname={session.quickContext?.nickname}
+              onExport={handleExport}
+              onShare={handleShare}
+              onReset={handleReset}
+            />
+          )
         )}
       </AnimatePresence>
     </div>

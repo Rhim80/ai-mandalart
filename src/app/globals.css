@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* Anthropic 폰트 (테스트용) */
+@font-face {
+  font-family: 'anthropicSans';
+  src: url('/fonts/anthropicSans.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 300 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'anthropicSerif';
+  src: url('/fonts/anthropicSerif.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 300 800;
+  font-style: normal;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #1d1d1f;
