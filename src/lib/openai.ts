@@ -1,14 +1,12 @@
 import OpenAI from 'openai';
 
-let openaiClient: OpenAI | null = null;
-
+// Edge Runtime에서는 매 요청마다 새로운 인스턴스 생성
 function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
   }
-  return openaiClient;
+  return new OpenAI({ apiKey });
 }
 
 export async function callOpenAI<T>(
