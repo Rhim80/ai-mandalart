@@ -2,3 +2,7 @@ name = "ai-mandalart"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
+
+# Smart Placement: API 호출을 지원하는 지역으로 자동 라우팅
+[placement]
+mode = "smart"
