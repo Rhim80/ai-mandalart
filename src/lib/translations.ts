@@ -6,7 +6,7 @@ export const translations: Record<Language, Record<string, TranslationValue>> = 
   ko: {
     // QuickContext - Value Proposition
     'quickContext.title': 'AI Mandalart',
-    'quickContext.ohtaniStory': '오타니 쇼헤이는 고등학교 때 이 방법으로 "8구단 1순위 드래프트" 목표를 세우고 달성했습니다',
+    'quickContext.ohtaniStory': '현재 MLB에서 가장 핫한 오타니 쇼헤이는 고등학교 때 이 방법으로 "8구단 1순위 드래프트" 목표를 세우고 달성했습니다',
     'quickContext.processDesc': '목표 하나를 입력하면, AI가 8개 전략과 64개 실천항목을 제안합니다',
     'quickContext.subtitle': '먼저, 당신에 대해 알려주세요',
     'quickContext.nickname': '닉네임',
@@ -111,7 +111,7 @@ export const translations: Record<Language, Record<string, TranslationValue>> = 
   en: {
     // QuickContext - Value Proposition
     'quickContext.title': 'AI Mandalart',
-    'quickContext.ohtaniStory': 'Shohei Ohtani used this method in high school to set and achieve his goal of being "drafted 1st round by 8 teams"',
+    'quickContext.ohtaniStory': 'The hottest player in MLB, Shohei Ohtani, used this method in high school to set and achieve his goal of being "drafted 1st round by 8 teams"',
     'quickContext.processDesc': 'Enter one goal, and AI will suggest 8 strategies and 64 action items',
     'quickContext.subtitle': 'Tell us about yourself',
     'quickContext.nickname': 'Nickname',

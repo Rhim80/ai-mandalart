@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import {
   MandalartSession,
   INITIAL_SESSION,
@@ -14,51 +14,63 @@ import {
 
 const STORAGE_KEY = 'ai-mandalart-session';
 
-// Get initial session from localStorage
-function getStoredSession(): MandalartSession {
-  if (typeof window === 'undefined') return INITIAL_SESSION;
+// Mutable store for session state
+let sessionStore: MandalartSession = INITIAL_SESSION;
+const listeners = new Set<() => void>();
+
+function notifyListeners() {
+  listeners.forEach((listener) => listener());
+}
+
+function subscribeToSession(callback: () => void) {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
+}
+
+function getSessionSnapshot(): MandalartSession {
+  return sessionStore;
+}
+
+function getServerSnapshot(): MandalartSession {
+  return INITIAL_SESSION;
+}
+
+// Initialize from localStorage (called once on client)
+if (typeof window !== 'undefined') {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
-      return JSON.parse(saved);
+      sessionStore = JSON.parse(saved);
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     }
   }
-  return INITIAL_SESSION;
 }
 
-// Subscribe to storage changes
-function subscribeToStorage(callback: () => void) {
-  window.addEventListener('storage', callback);
-  return () => window.removeEventListener('storage', callback);
+function updateSession(updater: (prev: MandalartSession) => MandalartSession) {
+  sessionStore = updater(sessionStore);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionStore));
+  }
+  notifyListeners();
 }
 
 export function useMandalartSession() {
-  // Use useSyncExternalStore for hydration-safe initial state
-  const storedSession = useSyncExternalStore(
-    subscribeToStorage,
-    getStoredSession,
-    () => INITIAL_SESSION // Server snapshot
+  const session = useSyncExternalStore(
+    subscribeToSession,
+    getSessionSnapshot,
+    getServerSnapshot
   );
 
-  const [session, setSession] = useState<MandalartSession>(storedSession);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Save to localStorage on change
-  useEffect(() => {
-    if (session !== INITIAL_SESSION) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    }
-  }, [session]);
-
   const setStep = useCallback((step: SessionStep) => {
-    setSession((prev) => ({ ...prev, currentStep: step }));
+    updateSession((prev) => ({ ...prev, currentStep: step }));
   }, []);
 
   const setQuickContext = useCallback((context: QuickContext) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       quickContext: context,
       currentStep: 'GOAL_INPUT',
@@ -66,7 +78,7 @@ export function useMandalartSession() {
   }, []);
 
   const setGoal = useCallback((goal: string) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       userContext: {
         goal,
@@ -76,7 +88,7 @@ export function useMandalartSession() {
   }, []);
 
   const setArchetype = useCallback((archetype: ArchetypeType) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       projectInfo: {
         name: 'AI Mandalart',
@@ -87,7 +99,7 @@ export function useMandalartSession() {
   }, []);
 
   const addInterviewAnswer = useCallback((answer: InterviewAnswer) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       userContext: {
         ...prev.userContext!,
@@ -100,7 +112,7 @@ export function useMandalartSession() {
   }, []);
 
   const setVibeSummary = useCallback((vibeSummary: string) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       userContext: {
         ...prev.userContext!,
@@ -113,11 +125,11 @@ export function useMandalartSession() {
   }, []);
 
   const setSuggestedPillars = useCallback((pillars: Pillar[]) => {
-    setSession((prev) => ({ ...prev, suggestedPillars: pillars }));
+    updateSession((prev) => ({ ...prev, suggestedPillars: pillars }));
   }, []);
 
   const togglePillarSelection = useCallback((pillarId: string, customPillar?: Pillar) => {
-    setSession((prev) => {
+    updateSession((prev) => {
       const isSelected = prev.selectedPillars.some((p) => p.id === pillarId);
       // Use customPillar if provided (for user-added pillars), otherwise find from suggested
       const pillar = customPillar || prev.suggestedPillars.find((p) => p.id === pillarId);
@@ -145,14 +157,14 @@ export function useMandalartSession() {
   }, []);
 
   const setMandalart = useCallback((core: string, subGrids: SubGrid[]) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       mandalart: { core, subGrids },
     }));
   }, []);
 
   const enterDiscoveryMode = useCallback(() => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       isDiscoveryMode: true,
       currentStep: 'DISCOVERY',
@@ -160,19 +172,18 @@ export function useMandalartSession() {
   }, []);
 
   const addDiscoveryAnswer = useCallback((answer: InterviewAnswer) => {
-    setSession((prev) => ({
+    updateSession((prev) => ({
       ...prev,
       discoveryAnswers: [...prev.discoveryAnswers, answer],
     }));
   }, []);
 
   const setSuggestedGoals = useCallback((goals: string[]) => {
-    setSession((prev) => ({ ...prev, suggestedGoals: goals }));
+    updateSession((prev) => ({ ...prev, suggestedGoals: goals }));
   }, []);
 
   const resetSession = useCallback(() => {
-    setSession(INITIAL_SESSION);
-    localStorage.removeItem(STORAGE_KEY);
+    updateSession(() => INITIAL_SESSION);
   }, []);
 
   return {
