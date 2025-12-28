@@ -57,7 +57,7 @@ interface MandalartGridProps {
 // 내보내기 비율 옵션 (ExportRatio는 ./export에서 import)
 const EXPORT_RATIOS: Record<ExportRatio, { width: number; height: number; label: string; containerRatio: ExportRatio }> = {
   story: { width: 1080, height: 1920, label: '인스타 스토리 (9:16)', containerRatio: 'story' },
-  square: { width: 1080, height: 1080, label: '정사각형 (1:1)', containerRatio: 'square' },
+  feed: { width: 1080, height: 1350, label: '인스타 피드 (4:5)', containerRatio: 'feed' },
   wide: { width: 1920, height: 1080, label: '데스크탑 (16:9)', containerRatio: 'wide' },
 };
 

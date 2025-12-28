@@ -1,7 +1,7 @@
 import { ExportGrid } from './ExportGrid';
 import { MandalartData } from '@/types/mandalart';
 
-export type ExportRatio = 'story' | 'square' | 'wide';
+export type ExportRatio = 'story' | 'feed' | 'wide';
 
 interface ExportContainerProps {
   data: MandalartData;
@@ -12,33 +12,33 @@ interface ExportContainerProps {
 // 비율별 크기 설정
 const RATIO_CONFIG = {
   story: { width: 1080, height: 1920 }, // 9:16
-  square: { width: 1080, height: 1080 }, // 1:1
+  feed: { width: 1080, height: 1350 }, // 4:5 (인스타그램 피드 최적)
   wide: { width: 1920, height: 1080 }, // 16:9
 };
 
 export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: ExportContainerProps) {
   const { width, height } = RATIO_CONFIG[ratio];
   const isStory = ratio === 'story';
-  const isSquare = ratio === 'square';
+  const isFeed = ratio === 'feed';
   const isWide = ratio === 'wide';
 
   // 비율별 폰트 크기 조정
   const fontSize = {
-    year: isStory ? 72 : isSquare ? 48 : 56,
-    keyword: isStory ? 20 : isSquare ? 14 : 16,
-    nickname: isStory ? 56 : isSquare ? 36 : 44,
-    cta: isStory ? 28 : isSquare ? 18 : 22,
-    url: isStory ? 24 : isSquare ? 16 : 18,
+    year: isStory ? 72 : isFeed ? 56 : 56,
+    keyword: isStory ? 20 : isFeed ? 16 : 16,
+    nickname: isStory ? 56 : isFeed ? 44 : 44,
+    cta: isStory ? 28 : isFeed ? 22 : 22,
+    url: isStory ? 24 : isFeed ? 20 : 18,
   };
 
   // 비율별 패딩/마진 조정
   const spacing = {
-    containerPadding: isStory ? 24 : isSquare ? 16 : 20,
-    headerPaddingTop: isStory ? 40 : isSquare ? 20 : 24,
-    headerPaddingBottom: isStory ? 16 : isSquare ? 8 : 12,
-    gridMargin: isStory ? 16 : isSquare ? 8 : 12,
-    footerPaddingBottom: isStory ? 48 : isSquare ? 20 : 28,
-    ctaMarginBottom: isStory ? 20 : isSquare ? 12 : 16,
+    containerPadding: isStory ? 24 : isFeed ? 20 : 20,
+    headerPaddingTop: isStory ? 120 : isFeed ? 24 : 24, // story: 헤더 더 아래로
+    headerPaddingBottom: isStory ? 32 : isFeed ? 8 : 12, // story: 헤더-그리드 간격 넓힘
+    gridMargin: isStory ? 32 : isFeed ? 8 : 12, // story: 그리드 마진 넓힘
+    footerPaddingBottom: isStory ? 80 : isFeed ? 16 : 28, // story: 푸터 더 위로
+    ctaMarginBottom: isStory ? 24 : isFeed ? 12 : 16,
   };
 
   return (
@@ -57,15 +57,16 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
       {/* Wide 레이아웃: 왼쪽 헤더 + 오른쪽 그리드 */}
       {isWide ? (
         <>
-          {/* 왼쪽: 헤더 + 푸터 */}
+          {/* 왼쪽: 헤더 + 푸터 - 더 넓은 영역으로 중앙 배치 */}
           <div
             style={{
-              width: '320px',
+              width: '560px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
               alignItems: 'center',
-              paddingRight: '24px',
+              paddingLeft: '80px',
+              paddingRight: '40px',
             }}
           >
             <div style={{ textAlign: 'center' }}>
@@ -159,7 +160,7 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
         </>
       ) : (
         <>
-          {/* Story/Square 레이아웃: 세로 배치 */}
+          {/* Story/Feed 레이아웃: 세로 배치 */}
           {/* Header */}
           <header
             style={{
@@ -174,7 +175,7 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
                 fontSize: `${fontSize.year}px`,
                 fontWeight: 'bold',
                 letterSpacing: '0.15em',
-                marginBottom: isSquare ? '6px' : '12px',
+                marginBottom: isFeed ? '8px' : '12px',
                 color: '#5d5654',
               }}
             >
@@ -186,7 +187,7 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
                 letterSpacing: '0.4em',
                 textTransform: 'uppercase',
                 color: '#888888',
-                marginBottom: isSquare ? '12px' : '20px',
+                marginBottom: isFeed ? '14px' : '20px',
               }}
             >
               Life Keyword
@@ -225,47 +226,49 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
             </div>
           </main>
 
-          {/* Footer */}
-          <footer
-            style={{
-              flexShrink: 0,
-              textAlign: 'center',
-              paddingBottom: `${spacing.footerPaddingBottom}px`,
-            }}
-          >
-            {isStory && (
-              <div
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  padding: '20px 40px',
-                  borderRadius: '16px',
-                  display: 'inline-block',
-                  marginBottom: `${spacing.ctaMarginBottom}px`,
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: `${fontSize.cta}px`,
-                    fontWeight: 500,
-                    lineHeight: 1.5,
-                    color: '#5d5654',
-                  }}
-                >
-                  2026년 목표를 SNS에 공유하고
-                  <br />
-                  함께 실천해보세요!
-                </p>
-              </div>
-            )}
-            <div
+          {/* Footer - Feed는 푸터 없음 */}
+          {!isFeed && (
+            <footer
               style={{
-                color: '#aaaaaa',
-                fontSize: `${fontSize.url}px`,
+                flexShrink: 0,
+                textAlign: 'center',
+                paddingBottom: `${spacing.footerPaddingBottom}px`,
               }}
             >
-              mandalart.imiwork.com
-            </div>
-          </footer>
+              {isStory && (
+                <div
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                    padding: '20px 40px',
+                    borderRadius: '16px',
+                    display: 'inline-block',
+                    marginBottom: '40px', // CTA와 URL 사이 간격 넓힘
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: `${fontSize.cta}px`,
+                      fontWeight: 500,
+                      lineHeight: 1.5,
+                      color: '#5d5654',
+                    }}
+                  >
+                    2026년 목표를 SNS에 공유하고
+                    <br />
+                    함께 실천해보세요!
+                  </p>
+                </div>
+              )}
+              <div
+                style={{
+                  color: '#aaaaaa',
+                  fontSize: `${fontSize.url}px`,
+                }}
+              >
+                mandalart.imiwork.com
+              </div>
+            </footer>
+          )}
         </>
       )}
     </div>
