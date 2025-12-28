@@ -3,6 +3,8 @@ import { callOpenAI } from '@/lib/openai';
 import { ARCHETYPE_DETECTION } from '@/lib/prompts';
 import { ArchetypeResponse, QuickContext } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 export async function POST(req: NextRequest) {
   try {
     const { goal, quickContext } = await req.json() as { goal: string; quickContext?: QuickContext };

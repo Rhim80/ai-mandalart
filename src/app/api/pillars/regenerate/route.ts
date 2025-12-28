@@ -3,6 +3,8 @@ import { callOpenAI } from '@/lib/openai';
 import { PILLAR_REGENERATION } from '@/lib/prompts';
 import { ArchetypeType, Pillar, PillarsResponse } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 export async function POST(req: NextRequest) {
   try {
     const { archetype, goal, vibeSummary, selectedPillars, rejectedPillars, count } = await req.json() as {

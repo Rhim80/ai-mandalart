@@ -3,6 +3,8 @@ import { callOpenAI } from '@/lib/openai';
 import { PILLAR_SUGGESTION } from '@/lib/prompts';
 import { ArchetypeType, PillarsResponse } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 export async function POST(req: NextRequest) {
   try {
     const { archetype, goal, vibeSummary } = await req.json() as {

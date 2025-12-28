@@ -9,6 +9,8 @@ import {
   QuickContext,
 } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 interface InterviewQuestionsResponse {
   questions: string[];
 }

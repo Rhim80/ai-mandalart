@@ -3,6 +3,8 @@ import { callOpenAI } from '@/lib/openai';
 import { DISCOVERY_QUESTIONS, DISCOVERY_GOAL_SUGGESTION } from '@/lib/prompts';
 import { InterviewAnswer, DiscoveryQuestionResponse, DiscoveryGoalsResponse } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

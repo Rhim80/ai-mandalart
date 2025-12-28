@@ -3,6 +3,8 @@ import { callOpenAI } from '@/lib/openai';
 import { ACTION_GENERATION } from '@/lib/prompts';
 import { Pillar, ActionsResponse } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 export async function POST(req: NextRequest) {
   try {
     const { goal, vibeSummary, selectedPillars } = await req.json() as {

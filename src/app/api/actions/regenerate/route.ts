@@ -3,6 +3,8 @@ import { callOpenAI } from '@/lib/openai';
 import { ACTION_REGENERATION } from '@/lib/prompts';
 import { Pillar } from '@/types/mandalart';
 
+export const runtime = 'edge';
+
 interface ActionRegenerationResponse {
   actions: string[];
 }
