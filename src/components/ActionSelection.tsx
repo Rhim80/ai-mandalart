@@ -45,6 +45,7 @@ export function ActionSelection({
   });
   const [completedSubGrids, setCompletedSubGrids] = useState<SubGrid[]>([]);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customActionText, setCustomActionText] = useState('');
 
@@ -61,9 +62,23 @@ export function ActionSelection({
     }));
   };
 
+  // Reset state when moving to a new pillar
+  useEffect(() => {
+    // Immediately reset state when pillar changes
+    setProgress({
+      pillarIndex: currentPillarIndex,
+      suggestedActions: [],
+      selectedActions: [],
+      isLoading: true,
+    });
+    setRegenerateError(null);
+    setShowCustomInput(false);
+    setCustomActionText('');
+  }, [currentPillarIndex]);
+
   // Fetch actions for current pillar
   const fetchActions = useCallback(async () => {
-    setProgress((prev) => ({ ...prev, isLoading: true }));
+    if (!currentPillar) return;
 
     try {
       const res = await fetch('/api/actions/suggest', {
@@ -139,6 +154,7 @@ export function ActionSelection({
     if (isRegenerating || unselectedCount === 0) return;
 
     setIsRegenerating(true);
+    setRegenerateError(null);
     try {
       // Calculate rejected actions: previously suggested but not selected
       const selectedIds = new Set(progress.selectedActions.map((a) => a.id));
@@ -162,7 +178,14 @@ export function ActionSelection({
       if (!res.ok) throw new Error('Failed to regenerate actions');
 
       const data = await res.json();
-      const newActionItems = createActionItems(data.actions || [], 'regen_');
+      const newActions = data.actions || [];
+
+      if (newActions.length === 0) {
+        setRegenerateError(language === 'ko' ? '새로운 옵션을 가져오지 못했습니다. 다시 시도해주세요.' : 'Failed to get new options. Please try again.');
+        return;
+      }
+
+      const newActionItems = createActionItems(newActions, 'regen_');
 
       // Keep selected actions, replace unselected ones
       setProgress((prev) => ({
@@ -171,6 +194,7 @@ export function ActionSelection({
       }));
     } catch (error) {
       console.error('Failed to regenerate actions:', error);
+      setRegenerateError(language === 'ko' ? '옵션 재생성 중 오류가 발생했습니다.' : 'Error regenerating options.');
     } finally {
       setIsRegenerating(false);
     }
@@ -473,6 +497,12 @@ export function ActionSelection({
                 {!canProceed && selectedCount > 0 && (
                   <p className="text-sm text-secondary">
                     {t('actionSelection.needMore', { n: 8 - selectedCount })}
+                  </p>
+                )}
+
+                {regenerateError && (
+                  <p className="text-sm text-red-500">
+                    {regenerateError}
                   </p>
                 )}
               </motion.div>
