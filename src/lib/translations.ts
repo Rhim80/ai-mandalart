@@ -89,7 +89,7 @@ export const translations: Record<Language, Record<string, TranslationValue>> = 
     'discovery.selectGoal': '이 목표로 시작하기',
 
     // Donation
-    'donation.support': '커피 한 잔 사주기',
+    'donation.support': '커피 한 잔 사주기 (후원하기)',
     'donation.supportShort': '후원하기',
 
     // Footer
