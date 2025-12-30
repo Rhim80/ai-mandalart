@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import { MandalartData } from '@/types/mandalart';
@@ -68,7 +68,35 @@ export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: Ma
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [currentExportRatio, setCurrentExportRatio] = useState<ExportRatio>('story');
+  const [blessing, setBlessing] = useState<string | null>(null);
+  const [isBlessingLoading, setIsBlessingLoading] = useState(true);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  // Fetch blessing on mount
+  useEffect(() => {
+    const fetchBlessing = async () => {
+      try {
+        const pillars = data.subGrids.map(sg => sg.title);
+        const res = await fetch('/api/blessing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            goal: data.core,
+            pillars,
+          }),
+        });
+        if (res.ok) {
+          const result = await res.json();
+          setBlessing(result.blessing);
+        }
+      } catch (error) {
+        console.error('Failed to fetch blessing:', error);
+      } finally {
+        setIsBlessingLoading(false);
+      }
+    };
+    fetchBlessing();
+  }, [data.core, data.subGrids]);
 
   // 비율별 이미지 내보내기 (html-to-image 방식)
   const handleExportWithRatio = useCallback(async (ratio: ExportRatio) => {
@@ -462,7 +490,7 @@ export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: Ma
           zIndex: -1,
         }}
       >
-        <ExportContainer data={data} nickname={nickname} ratio={currentExportRatio} />
+        <ExportContainer data={data} nickname={nickname} ratio={currentExportRatio} blessing={blessing || undefined} />
       </div>
 
       {/* Grid Container */}
@@ -483,6 +511,22 @@ export function MandalartGrid({ data, nickname, onExport, onShare, onReset }: Ma
             {nickname && (
               <p className="text-base text-gray-600 mt-2 font-medium">
                 {nickname}
+              </p>
+            )}
+            {/* AI Blessing - below nickname */}
+            {blessing && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-sm text-gray-500 mt-3 italic"
+              >
+                &ldquo;{blessing}&rdquo;
+              </motion.p>
+            )}
+            {isBlessingLoading && (
+              <p className="text-xs text-gray-400 mt-3 animate-pulse">
+                {language === 'ko' ? '...' : '...'}
               </p>
             )}
           </div>

@@ -7,6 +7,7 @@ interface ExportContainerProps {
   data: MandalartData;
   nickname?: string;
   ratio?: ExportRatio;
+  blessing?: string;
 }
 
 // 비율별 크기 설정
@@ -16,7 +17,7 @@ const RATIO_CONFIG = {
   wide: { width: 1920, height: 1080 }, // 16:9
 };
 
-export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: ExportContainerProps) {
+export function ExportContainer({ data, nickname = 'My', ratio = 'story', blessing }: ExportContainerProps) {
   const { width, height } = RATIO_CONFIG[ratio];
   const isStory = ratio === 'story';
   const isFeed = ratio === 'feed';
@@ -27,6 +28,7 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
     year: isStory ? 72 : isFeed ? 56 : 56,
     keyword: isStory ? 20 : isFeed ? 16 : 16,
     nickname: isStory ? 56 : isFeed ? 44 : 44,
+    blessing: isStory ? 24 : isFeed ? 20 : 20,
     cta: isStory ? 28 : isFeed ? 22 : 22,
     url: isStory ? 24 : isFeed ? 20 : 18,
   };
@@ -97,11 +99,24 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
                   fontSize: `${fontSize.nickname}px`,
                   fontWeight: 500,
                   color: '#d68c7b',
-                  marginBottom: '32px',
+                  marginBottom: blessing ? '12px' : '32px',
                 }}
               >
                 {nickname}
               </div>
+              {blessing && (
+                <div
+                  style={{
+                    fontSize: `${fontSize.blessing}px`,
+                    fontStyle: 'italic',
+                    color: '#888888',
+                    marginBottom: '24px',
+                    maxWidth: '400px',
+                  }}
+                >
+                  &ldquo;{blessing}&rdquo;
+                </div>
+              )}
             </div>
             <div
               style={{
@@ -201,6 +216,21 @@ export function ExportContainer({ data, nickname = 'My', ratio = 'story' }: Expo
             >
               {nickname}
             </div>
+            {blessing && (
+              <div
+                style={{
+                  fontSize: `${fontSize.blessing}px`,
+                  fontStyle: 'italic',
+                  color: '#888888',
+                  maxWidth: '90%',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  marginTop: isFeed ? '12px' : '16px',
+                }}
+              >
+                &ldquo;{blessing}&rdquo;
+              </div>
+            )}
           </header>
 
           {/* Grid */}
